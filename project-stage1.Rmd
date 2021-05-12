@@ -1,7 +1,7 @@
 ---
 title: "Course project: stage 1"
 author: "PSTAT131-231"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -13,7 +13,8 @@ knitr::opts_chunk$set(echo = F,
 library(pander)
 library(tidyverse)
 library(ggmap)
-setwd('~/pstat131-231/project')
+library(maps)
+setwd("~/Documents/Spring2021/PSTAT131/project-stage1")
 ```
 ### Project overview and expectations
 
@@ -268,9 +269,21 @@ Now that you have tidy versions of the census and election data, and a merged da
 # Part 2: Exploratory analysis
 ### Question 2 (a)
 How many named presidential candidates were there in the 2016 election? Draw a bar graph of all votes received by each candidate, and order the candidate names by decreasing vote counts. (*Hints*: use the federal-level election data; you may need to log-transform the vote axis to see all the bar heights clearly.)
-```{r}
+```{r fig.height = 4.5, fig.width = 6.5}
 # plotting codes here
-
+election_raw %>%
+  dplyr::select(candidate, votes) %>%
+  group_by(candidate) %>%
+  summarize(total_votes = sum(votes)) %>%
+  ggplot(aes(x = total_votes, 
+             y = fct_reorder(.f = candidate, .x = total_votes))) +
+  geom_bar(stat = 'identity',
+           fill = 'lightskyblue') + 
+  scale_x_continuous(trans='log2') +
+  xlab('Total Votes') +
+  ylab('Candidate') +
+  labs(title = 'Total Votes Recieved by Each Presidential Candidate in the 2016 Election') +
+  theme_bw(base_size = 9)
 ```
 
 
@@ -287,7 +300,7 @@ states <- states %>%
   mutate(fips = name2abb(region))
 
 # who won each state?
-state_winner <- election_state %>% # this line depends on your results above!
+state_winner <- election_raw %>% # this line depends on your results above!
   group_by(fips) %>% 
   mutate(total = sum(votes), 
          pct = votes/total) %>% 
@@ -308,16 +321,40 @@ left_join(states, state_winner) %>%
   theme_nothing()
 ```
 
-
 ### Question 2 (b) 
 Follow the example above to create a map of the election winner by county. The .Rmd file for this document contains codes to get you started.
 ```{r}
 # plotting boundaries for US counties
+counties <- map_data("county")
+county_fips <- function(state, countyname){
+  ix <- match(paste(state, ',', countyname, sep = ''), county.fips$polyname)
+  out <- county.fips$fips[ix]
+  return(out)
+}
+counties <- counties %>%
+  mutate(fips = county_fips(region, subregion))
+counties$fips <- as.character(counties$fips)
 
 # who won each county?
+county_winner <- election_raw %>%
+  group_by(fips) %>% 
+  mutate(total = sum(votes), 
+         pct = votes/total) %>% 
+  slice_max(pct)
 
 # merge winner with plotting boundaries and make map
-
+left_join(counties, county_winner) %>%
+  ggplot() + 
+  geom_polygon(aes(x = long, 
+                   y = lat, 
+                   fill = candidate, 
+                   group = group), 
+               color = "white", 
+               size=0.3) +
+  coord_fixed(1.3) +
+  guides(fill=FALSE) +
+  scale_fill_brewer(palette="Set1") +
+  theme_nothing()
 ```
 ### Question 2 (c)
 Which variables drive variation among counties? Carry out PCA for the census data. 
