@@ -323,7 +323,7 @@ left_join(states, state_winner) %>%
 
 ### Question 2 (b) 
 Follow the example above to create a map of the election winner by county. The .Rmd file for this document contains codes to get you started.
-```{r}
+```{r message = FALSE}
 # plotting boundaries for US counties
 counties <- map_data("county")
 county_fips <- function(state, countyname){
