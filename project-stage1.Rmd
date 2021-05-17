@@ -307,7 +307,6 @@ census_tidy %>%
   select(1:7) %>%
   head(3) %>% 
   pander()
-names(census_tidy)
 ```
 
 You can check your final result by comparison with the reference dataset in the .Rmd file for this document containing the first 20 rows of the tidy data.
