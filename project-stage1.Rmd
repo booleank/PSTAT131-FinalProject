@@ -115,7 +115,8 @@ Nationwide and statewide tallies are included as rows in `election_raw` with `co
 Inspect rows with `fips == 2000`. Provide a reason for excluding them. 
 ```{r, include = F}
 # scratch work here for inspection -- will not be included in report
-
+election_raw %>%
+  filter(fips == 2000)
 ```
 
 *Type your answer here.*
@@ -124,9 +125,11 @@ Inspect rows with `fips == 2000`. Provide a reason for excluding them.
 Drop these observations -- please write over `election_raw` -- and report the data dimensions after removal. 
 ```{r}
 # filter out fips == 2000
+election_raw <- election_raw %>%
+  filter(fips != 2000)
 
 # print dimensions
-
+dim(election_raw)
 ```
 
 ## Census data
@@ -160,6 +163,18 @@ Separate `election_raw` into separate federal-, state-, and county-level datafra
 
 ```{r}
 # create one dataframe per observational unit
+election_raw %>%
+  group_by(fips)
+
+election_federal <- election_raw %>%
+  filter(fips == 'US')
+
+election_state <- election_raw %>%
+  filter(is.na(county), fips != 'US', fips != 46102)
+
+election <- election_raw %>%
+  filter(county != 'NA') %>%
+  mutate(fips = as.numeric(fips))
 
 ```
 
@@ -167,21 +182,30 @@ Separate `election_raw` into separate federal-, state-, and county-level datafra
 Format the table nicely using `pander()`.
 ```{r}
 # print first few rows
-
+election_federal %>% 
+  select(1:3) %>% 
+  head() %>% 
+  pander()
 ```
 
 #### (ii) Print the first three rows of `election_state`.
 Format the table nicely using `pander()`.
 ```{r}
 # print first few rows
-
+election_state %>% 
+  select(1:3) %>% 
+  head() %>% 
+  pander()
 ```
 
 #### (iii) Print the first three rows of `election`. 
 Format the table nicely using `pander()`.
 ```{r}
 # print first few rows
-
+election %>% 
+  select(1:3) %>% 
+  head() %>% 
+  pander()
 ```
 
 
@@ -208,7 +232,22 @@ Store the result as `census_clean`, and print the first 3 rows and 7 columns. Fo
 
 ```{r}
 # clean census data
-
+census_clean <- census %>%
+  na.omit() %>% 
+  mutate(Men = (Men/TotalPop)*100) %>%
+  mutate(Women = (Women/TotalPop)*100) %>%
+  mutate(Employed = (Employed/TotalPop)*100) %>%
+  mutate(Citizen = (Citizen/TotalPop)*100) %>% # these are in decimal form
+  mutate(Minority = Hispanic + Black + Native + Asian + Pacific) %>% # Minority is at the end maybe move?
+  select(-c(Men,Hispanic, Black, Native, Asian, Pacific, Income, Walk, PublicWork, Construction)) %>%
+  select(-(contains('Err')))
+  
+  
+# print first few rows/columns
+census_clean %>% 
+  select(1:7) %>%
+  head(3) %>% 
+  pander()
 # print first few rows/columns
 
 ```
@@ -229,9 +268,20 @@ To aggregate the clean census data to the county level, you'll weight the variab
 Store the result as `census_clean_weighted`, and print the first 3 rows and 7 columns. Format the output nicely using `pander()`.
 ```{r}
 # compute population-weighted quantitative variables
+census_clean_weighted <- census_clean %>%
+  group_by(State, County) %>%
+  add_tally(TotalPop) %>%
+  rename(CountyPop = n) %>%
+  mutate(pop_wt = TotalPop/CountyPop) %>%
+  mutate(across(where(is.numeric),~ .x*pop_wt)) %>%
+  ungroup() %>%
+  select(-c(pop_wt, CensusTract, TotalPop, CountyPop)) # what other population variables to drop 
 
 # print first few rows/columns
-
+census_clean_weighted %>% 
+  select(1:7) %>%
+  head(3) %>% 
+  pander()
 ```
 
 
@@ -247,9 +297,17 @@ Here you'll aggregate the census data to county level. Follow these steps:
 Store the result as `census_tidy` and print the first 3 rows and 7 columns. Format the output nicely using `pander()`.
 ```{r}
 # aggregate to county level
+census_tidy <- census_clean_weighted %>%
+  group_by(State, County) %>%
+  mutate(across(where(is.numeric), sum)) %>%
+  ungroup()
 
 # print first few rows/columns
-
+census_tidy %>% 
+  select(1:7) %>%
+  head(3) %>% 
+  pander()
+names(census_tidy)
 ```
 
 You can check your final result by comparison with the reference dataset in the .Rmd file for this document containing the first 20 rows of the tidy data.
