@@ -291,6 +291,7 @@ Store the result as `census_tidy` and print the first 3 rows and 7 columns. Form
 census_tidy <- census_clean_weighted %>%
   group_by(State, County) %>%
   mutate(across(where(is.numeric), sum)) %>%
+  ungroup() %>%
   distinct()
   
 # print first few rows/columns
@@ -412,11 +413,28 @@ Which variables drive variation among counties? Carry out PCA for the census dat
 #### (i) Center and scale the data, compute and plot the principal component loadings for the first two PC's.
 ```{r}
 # center and scale
+x_mx <- census_tidy %>% 
+  select(-c('State', 'County')) %>% 
+  scale(center = T, scale = T)
 
 # compute loadings for PC1 and PC2
+x_svd <- svd(x_mx)
+loadings <- x_svd$v
 
 # plot
-
+loadings[, 1:2] %>%
+  as.data.frame() %>%
+  rename(PC1 = V1, PC2 = V2) %>%
+  mutate(variable = colnames(x_mx)) %>%
+  gather(key = 'PC', value = 'Loading', 1:2) %>%
+  arrange(variable) %>%
+  ggplot(aes(x = variable, y = Loading)) +
+  geom_point(aes(shape = PC)) +
+  theme_bw() +
+  geom_hline(yintercept = 0, color = 'blue') +
+  geom_path(aes(linetype = PC, group = PC)) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(x = '')
 ```
 
 #### (ii) Interpret the loading plot. Which variables drive the variation in the data?
