@@ -127,7 +127,6 @@ Drop these observations -- please write over `election_raw` -- and report the da
 # filter out fips == 2000
 election_raw <- election_raw %>%
   filter(fips != 2000)
-
 # print dimensions
 dim(election_raw)
 ```
@@ -175,16 +174,14 @@ election_state <- election_raw %>%
 election <- election_raw %>%
   filter(county != 'NA') %>%
   mutate(fips = as.numeric(fips))
-
 ```
 
 #### (i) Print the first three rows of `election_federal`. 
 Format the table nicely using `pander()`.
 ```{r}
 # print first few rows
-election_federal %>% 
-  select(1:3) %>% 
-  head() %>% 
+election_federal %>%
+  head(3) %>% 
   pander()
 ```
 
@@ -193,8 +190,7 @@ Format the table nicely using `pander()`.
 ```{r}
 # print first few rows
 election_state %>% 
-  select(1:3) %>% 
-  head() %>% 
+  head(3) %>% 
   pander()
 ```
 
@@ -202,9 +198,8 @@ election_state %>%
 Format the table nicely using `pander()`.
 ```{r}
 # print first few rows
-election %>% 
-  select(1:3) %>% 
-  head() %>% 
+election %>%
+  head(3) %>% 
   pander()
 ```
 
@@ -241,15 +236,12 @@ census_clean <- census %>%
   mutate(Minority = Hispanic + Black + Native + Asian + Pacific) %>% # Minority is at the end maybe move?
   select(-c(Men,Hispanic, Black, Native, Asian, Pacific, Income, Walk, PublicWork, Construction)) %>%
   select(-(contains('Err')))
-  
-  
+
 # print first few rows/columns
 census_clean %>% 
   select(1:7) %>%
   head(3) %>% 
   pander()
-# print first few rows/columns
-
 ```
  
 ### Question 1 (e) 
@@ -275,7 +267,7 @@ census_clean_weighted <- census_clean %>%
   mutate(pop_wt = TotalPop/CountyPop) %>%
   mutate(across(where(is.numeric),~ .x*pop_wt)) %>%
   ungroup() %>%
-  select(-c(pop_wt, CensusTract, TotalPop, CountyPop)) # what other population variables to drop 
+  select(-c(pop_wt, CensusTract, TotalPop, CountyPop)) # what other population variables to drop
 
 # print first few rows/columns
 census_clean_weighted %>% 
@@ -296,22 +288,23 @@ Here you'll aggregate the census data to county level. Follow these steps:
     
 Store the result as `census_tidy` and print the first 3 rows and 7 columns. Format the output nicely using `pander()`.
 ```{r}
-# aggregate to county level
 census_tidy <- census_clean_weighted %>%
   group_by(State, County) %>%
   mutate(across(where(is.numeric), sum)) %>%
-  ungroup()
-
+  distinct()
+  
 # print first few rows/columns
 census_tidy %>% 
   select(1:7) %>%
   head(3) %>% 
   pander()
+names(census_tidy)
 ```
 
 You can check your final result by comparison with the reference dataset in the .Rmd file for this document containing the first 20 rows of the tidy data.
 ```{r}
 load('data/census-tidy-ref.RData')
+census_ref
 ```
 
 
@@ -319,7 +312,8 @@ load('data/census-tidy-ref.RData')
 Now that you have tidy versions of the census and election data, and a merged dataset, clear the raw and intermediate dataframes from your environment using `rm(list = setdiff(ls(), ...))`. `ls()` shows all objects in your environment, so the command removes the set difference between all objects and ones that you specify in place of `...`; the latter should be a vector of the object names you want to keep. You should keep the three data frames containing election data for the federal, state, and county levels, and the tidy census data.
 ```{r}
 # clean up environment
-
+keep <- c('census_tidy', 'election_federal', 'election_state', 'election')
+rm(list = setdiff(ls(), keep))
 ```
 
 \newpage
@@ -328,7 +322,7 @@ Now that you have tidy versions of the census and election data, and a merged da
 How many named presidential candidates were there in the 2016 election? Draw a bar graph of all votes received by each candidate, and order the candidate names by decreasing vote counts. (*Hints*: use the federal-level election data; you may need to log-transform the vote axis to see all the bar heights clearly.)
 ```{r fig.height = 4.5, fig.width = 6.5}
 # plotting codes here
-election_raw %>%
+election %>%
   dplyr::select(candidate, votes) %>%
   group_by(candidate) %>%
   summarize(total_votes = sum(votes)) %>%
@@ -357,7 +351,7 @@ states <- states %>%
   mutate(fips = name2abb(region))
 
 # who won each state?
-state_winner <- election_raw %>% # this line depends on your results above!
+state_winner <- election_state %>% # this line depends on your results above!
   group_by(fips) %>% 
   mutate(total = sum(votes), 
          pct = votes/total) %>% 
@@ -390,10 +384,9 @@ county_fips <- function(state, countyname){
 }
 counties <- counties %>%
   mutate(fips = county_fips(region, subregion))
-counties$fips <- as.character(counties$fips)
 
 # who won each county?
-county_winner <- election_raw %>%
+county_winner <- election %>%
   group_by(fips) %>% 
   mutate(total = sum(votes), 
          pct = votes/total) %>% 
@@ -422,8 +415,7 @@ Which variables drive variation among counties? Carry out PCA for the census dat
 
 # compute loadings for PC1 and PC2
 
-
-# plot 
+# plot
 
 ```
 
