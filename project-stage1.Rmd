@@ -75,7 +75,7 @@ To familiarize yourself with the general problem of predicting election outcomes
 ### Question 0 (a)
 What makes voter behavior prediction (and thus election forecasting) a hard problem?
 
-*Type your answer here*
+Although we are ultimately interested in how people will vote on election day, the data we get is based on how people think they will vote at the time they are asked, which may be months before the election. What people think changes over time, so this variable has to be incorporated into this model. This means we have to include a temporal component: we must generate a time series. This change over time might be because of something measurable, such as a change in employment, or if the president doubles federal income tax, he's not likely to be popular. There can be changes that we can't measure, such as a particularly successful campaign ad.
 
 ### Question 0 (b)
 What was unique to Nate Silver's approach in 2012 that allowed him to achieve good predictions?
