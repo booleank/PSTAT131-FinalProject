@@ -14,7 +14,7 @@ library(pander)
 library(tidyverse)
 library(ggmap)
 library(maps)
-setwd("~/Documents/Spring2021/PSTAT131/project-stage1")
+setwd("~/Documents/Spring2021/PSTAT131/Project")
 ```
 ### Project overview and expectations
 
@@ -87,7 +87,7 @@ The mathematical model for the proportion of people saying they will vote for a 
 ### Question 0 (c)
 What went wrong in 2016? What do you think should be done to make future predictions better?
 
-*Type your answer here.*
+Polls and forecasts were generally wrong about the election due to systematic polling challenges.  Clinton's projected voteshare was overestimated in most cases, particularly within swing states. Experts have speculated that Trump supporters were reluctant to participate and/or answer honestly to polling questions. In the future, I think pollsters should rely less on traditional landline calls and incorporate a wider variety of information-gathering methods, such as cellphone calls, emails, texts, internet polls, and social media web-scraping.
 
 \newpage
 # Part 1. Datasets
@@ -119,9 +119,11 @@ Inspect rows with `fips == 2000`. Provide a reason for excluding them.
 # scratch work here for inspection -- will not be included in report
 election_raw %>%
   filter(fips == 2000)
+election_raw %>%
+  filter(is.na(county))
 ```
 
-*Type your answer here.*
+Alaska only has one county, so the fips county data is identical to the statewide data.  
 
 ### Question 1 (b)
 Drop these observations -- please write over `election_raw` -- and report the data dimensions after removal. 
@@ -441,7 +443,7 @@ loadings[, 1:2] %>%
 
 #### (ii) Interpret the loading plot. Which variables drive the variation in the data?
 
-*Type your answer here.*
+Employment-related variables
 
 #### (iii) How much total variation is captured by the first two principal components?
 ```{r}
@@ -468,6 +470,10 @@ loadings[, 1:2] %>%
 
 ### Question 2 (d)
 Create a visualization of your choice using `census` data. Many exit polls noted that [demographics played a big role in the election](https://fivethirtyeight.com/features/demographics-not-hacking-explain-the-election-results/). If you need a starting point, use [this Washington Post article](https://www.washingtonpost.com/graphics/politics/2016-election/exit-polls/) and [this R graph gallery](https://www.r-graph-gallery.com/) for ideas and inspiration.
+
+```{r}
+
+```
 
 \newpage
 # Part 3: Planned work
@@ -541,14 +547,16 @@ These descriptions don't need to be long, just enough to convey the general idea
 
 #### Task 1
 
-
+**Task**:
+Predict election outcomes 
 
 **Methods**:
-
+Logistic regression
 
 #### Task 2
 
 **Task**:
+
 
 **Methods**:
 
