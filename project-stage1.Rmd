@@ -541,7 +541,7 @@ These descriptions don't need to be long, just enough to convey the general idea
 
 #### Task 1
 
-**Task**:
+
 
 **Methods**:
 
