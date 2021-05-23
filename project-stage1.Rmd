@@ -123,7 +123,7 @@ election_raw %>%
   filter(is.na(county))
 ```
 
-Alaska only has one county, so the fips county data is identical to the statewide data.  
+Alaska only has one county, so the fips county data is a duplicate of the statewide data.  
 
 ### Question 1 (b)
 Drop these observations -- please write over `election_raw` -- and report the data dimensions after removal. 
@@ -246,6 +246,7 @@ census_clean %>%
   select(1:7) %>%
   head(3) %>% 
   pander()
+
 ```
  
 ### Question 1 (e) 
@@ -319,6 +320,8 @@ Now that you have tidy versions of the census and election data, and a merged da
 # clean up environment
 keep <- c('census_tidy', 'election_federal', 'election_state', 'election')
 rm(list = setdiff(ls(), keep))
+election %>% filter(county == "Barbour County")
+
 ```
 
 \newpage
@@ -415,12 +418,12 @@ left_join(counties, county_winner) %>%
 Which variables drive variation among counties? Carry out PCA for the census data. 
 
 #### (i) Center and scale the data, compute and plot the principal component loadings for the first two PC's.
-```{r}
+```{r, fig.width = 7}
 # center and scale
 x_mx <- census_tidy %>% 
   select(-c('State', 'County')) %>% 
   scale(center = T, scale = T)
-
+census_tidy
 # compute loadings for PC1 and PC2
 x_svd <- svd(x_mx)
 loadings <- x_svd$v
@@ -441,23 +444,44 @@ loadings[, 1:2] %>%
   labs(x = '')
 ```
 
-#### (ii) Interpret the loading plot. Which variables drive the variation in the data?
+#### (ii) Interpret the loading plot. Which variables drive the variation in the data?  
 
-Employment-related variables
+The variables with the highest loading magnitudes drive variation in the data. These variables include Child Poverty, Commuter Rate, Employment Rate, Income Per Capita, Poverty, Private Work, Unemployment, and Work at Home. General information about income and employment, such as Child Poverty, Income Per Capita, Employment and Unemployment, corresponds to PC1. Specific professional information, such as Commuter Rate, Work at Home, and Private Work corresponds to PC2. 
 
-#### (iii) How much total variation is captured by the first two principal components?
-```{r}
+#### (iii) How much total variation is captured by the first two principal components?  
+
+```{r, eval = F}
 # scratch work here -- don't show codes or output
+d_sq <- x_svd$d^2/(nrow(x_mx) - 1)
 
+tibble(pc_var = d_sq,
+       pc = paste('PC', 1:ncol(x_mx), sep = '')) %>%
+  ggplot(aes(x = fct_reorder(pc, desc(pc_var)), 
+             y = cumsum(pc_var)/sum(pc_var))) +
+  geom_point() + 
+  geom_path() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, size = 6)) +
+  labs(x = "PC", y = 'Cumulative variance explained')
+
+sum(d_sq[1:2])/sum(d_sq)
 ```
 
-*Type your answer here.*
+The first two PC's capture 41.44% of the total variation.  
 
 
 #### (iv) Plot PC1 against PC2. 
 ```{r}
 # plotting codes here
+census_pc <- as.data.frame(x_mx %*% loadings[,1:2])
+colnames(census_pc) <- paste('PC', 1:2, sep = '')
 
+census_pc <- census_pc %>% mutate(County = census_tidy$County)
+
+census_pc %>%
+  ggplot(aes(PC1, PC2)) +
+  geom_point(size = 0.4, alpha = 0.6) +
+  geom_text(aes(label = ifelse((PC2<(-6)&PC1<(-5)), as.character(County), ''), hjust = 0, vjust = 0))
 ```
 
 #### (v) Do you notice any outlier counties? If so, which counties, and why do you think they are outliers?
@@ -466,7 +490,7 @@ Employment-related variables
 
 ```
 
-*Type your answer here.*
+Kusilvak Census Area is a clear outlier, since it has a significantly lower PC2 value than any other county. Oglala Lakota and Todd Counties also have exceptionally low combinations of PC1 and PC2 loading values. Each of these counties have majority Native American populations and exceptionally low income per capita. In fact, they are the three poorest counties in the 50 states according to census data. 
 
 ### Question 2 (d)
 Create a visualization of your choice using `census` data. Many exit polls noted that [demographics played a big role in the election](https://fivethirtyeight.com/features/demographics-not-hacking-explain-the-election-results/). If you need a starting point, use [this Washington Post article](https://www.washingtonpost.com/graphics/politics/2016-election/exit-polls/) and [this R graph gallery](https://www.r-graph-gallery.com/) for ideas and inspiration.
