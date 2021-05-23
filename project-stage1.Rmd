@@ -449,16 +449,16 @@ loadings[, 1:2] %>%
 ```{r}
 loadings[,1:2] %>% 
   as.data.frame() %>%
-  mutate(loading_sum = abs(V1+V2)) %>%
+  mutate(loading_sum = abs(V1)+abs(V2)) %>%
   select(loading_sum) %>%
   mutate(var = colnames(x_mx)) %>%
   arrange(desc(loading_sum)) %>%
   head(n = 7)
 ```
  
-The variables with the highest loading magnitudes drive variation in the data. These variables include 'White' and 'Minority' population rates, poverty rate, child poverty rate, employment and unemployment rates, and percent of workforce in private industry. 
+The variables with the highest loading magnitudes drive variation in the data. These variables include working-from-home rate, solo-commuter rate, 'White' and 'Minority' population percentages, poverty rate, self-employment rate, and percent of the workforce in private industry. 
 
-General information about income and employment, such as Child Poverty, Income Per Capita, Employment and Unemployment, corresponds to PC1. Specific professional information, such as Commuter Rate, Work at Home Rate, and Private Work Rate corresponds to PC2. 
+General information about income and employment, such as Poverty, Income Per Capita, Employment and Unemployment, corresponds to PC1. Specific professional information, such as Commuter Rate, Work at Home Rate, and Private Work Rate corresponds to PC2. 
 
 #### (iii) How much total variation is captured by the first two principal components?  
 
