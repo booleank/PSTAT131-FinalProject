@@ -449,13 +449,14 @@ loadings[, 1:2] %>%
 ```{r}
 loadings[,1:2] %>% 
   as.data.frame() %>%
-  mutate(sum = abs(V1+V2)) %>%
-  select(sum) %>%
+  mutate(loading_sum = abs(V1+V2)) %>%
+  select(loading_sum) %>%
   mutate(var = colnames(x_mx)) %>%
-  arrange(desc(sum))
+  arrange(desc(loading_sum)) %>%
+  head(n = 7)
 ```
  
-The variables with the highest loading magnitudes drive variation in the data. These variables include White, Poverty, Minority, PrivateWork, ChildPoverty, Employed, and Unemployment. This indicates that differences among counties' racial demographics, employment rates, private industry work rates, and poverty rates are the main drivers of election outcome variability. 
+The variables with the highest loading magnitudes drive variation in the data. These variables include 'White' and 'Minority' population rates, poverty rate, child poverty rate, employment and unemployment rates, and percent of workforce in private industry. 
 
 General information about income and employment, such as Child Poverty, Income Per Capita, Employment and Unemployment, corresponds to PC1. Specific professional information, such as Commuter Rate, Work at Home Rate, and Private Work Rate corresponds to PC2. 
 
@@ -501,13 +502,54 @@ census_pc %>%
 
 ```
 
-Kusilvak Census Area is a clear outlier, since it has a significantly lower PC2 value than any other county. Oglala Lakota and Todd Counties also have exceptionally low combinations of PC1 and PC2 loading values. Each of these counties have majority Native American populations and exceptionally low income per capita. In fact, they are the three poorest counties in the 50 states according to census data. 
+The Kusilvak Census Area is a clear outlier. It has a significantly lower PC2 value than any other county. Oglala Lakota and Todd Counties also have exceptionally low combinations of PC1 and PC2 loading values. Each of these counties have majority Native American populations and exceptionally low income per capita. In fact, they are the three poorest counties in the 50 states according to public data. 
 
 ### Question 2 (d)
 Create a visualization of your choice using `census` data. Many exit polls noted that [demographics played a big role in the election](https://fivethirtyeight.com/features/demographics-not-hacking-explain-the-election-results/). If you need a starting point, use [this Washington Post article](https://www.washingtonpost.com/graphics/politics/2016-election/exit-polls/) and [this R graph gallery](https://www.r-graph-gallery.com/) for ideas and inspiration.
 
-```{r}
+```{r, fig.width = 8}
+abb2name <- function(stateabb){
+  ix <- match(stateabb, state.abb)
+  out <- tolower(state.name[ix])
+  return(out)
+}
 
+# top two candidates by county
+toptwo <- election %>% 
+  group_by(fips) %>% 
+  mutate(total = sum(votes), 
+         pct = votes/total) %>% 
+  slice_max(pct, n = 2)
+
+# create temporary dataframes with matching state/county information
+tmpelection <- toptwo %>%
+  ungroup %>%
+  # coerce names to abbreviations
+  mutate(state = abb2name(state)) %>%
+  # everything lower case
+  mutate(across(c(state, county), tolower)) %>%
+  # remove county suffixes
+  mutate(county = gsub(" county| columbia| city| parish", 
+                       "", 
+                       county)) 
+tmpcensus <- census_tidy %>% 
+  # coerce state and county to lowercase
+  mutate(across(c(State, County), tolower))
+
+# merge
+merged_data <- tmpelection %>%
+  left_join(tmpcensus, 
+            by = c("state"="State", "county"="County")) %>% 
+  na.omit()
+
+merged_data %>%
+  group_by(county, state) %>%
+  slice_max(votes) %>%
+  ggplot(aes(Minority, Poverty)) +
+  geom_point(aes(color = candidate), size = 0.7) +
+  xlab('% Minority') +
+  ylab('% Under the Poverty Level') +
+  ggtitle('Election outcomes in counties by minority and poverty percentages')
 ```
 
 \newpage
@@ -550,12 +592,13 @@ merged_data <- tmpelection %>%
   left_join(tmpcensus, 
             by = c("state"="State", "county"="County")) %>% 
   na.omit()
-
 # clear temporary dataframes from environment
 rm(list = c('tmpwinner', 'tmpcensus'))
 
 # print first few rows
 merged_data[1:4, 1:8] %>% pander()
+}
+
 ```
 
 There are a number of possibilities for analyzing this data. Here are just a few:
