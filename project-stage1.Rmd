@@ -446,7 +446,18 @@ loadings[, 1:2] %>%
 
 #### (ii) Interpret the loading plot. Which variables drive the variation in the data?  
 
-The variables with the highest loading magnitudes drive variation in the data. These variables include Child Poverty, Commuter Rate, Employment Rate, Income Per Capita, Poverty, Private Work, Unemployment, and Work at Home. General information about income and employment, such as Child Poverty, Income Per Capita, Employment and Unemployment, corresponds to PC1. Specific professional information, such as Commuter Rate, Work at Home, and Private Work corresponds to PC2. 
+```{r}
+loadings[,1:2] %>% 
+  as.data.frame() %>%
+  mutate(sum = abs(V1+V2)) %>%
+  select(sum) %>%
+  mutate(var = colnames(x_mx)) %>%
+  arrange(desc(sum))
+```
+ 
+The variables with the highest loading magnitudes drive variation in the data. These variables include White, Poverty, Minority, PrivateWork, ChildPoverty, Employed, and Unemployment. This indicates that differences among counties' racial demographics, employment rates, private industry work rates, and poverty rates are the main drivers of election outcome variability. 
+
+General information about income and employment, such as Child Poverty, Income Per Capita, Employment and Unemployment, corresponds to PC1. Specific professional information, such as Commuter Rate, Work at Home Rate, and Private Work Rate corresponds to PC2. 
 
 #### (iii) How much total variation is captured by the first two principal components?  
 
@@ -481,7 +492,7 @@ census_pc <- census_pc %>% mutate(County = census_tidy$County)
 census_pc %>%
   ggplot(aes(PC1, PC2)) +
   geom_point(size = 0.4, alpha = 0.6) +
-  geom_text(aes(label = ifelse((PC2<(-6)&PC1<(-5)), as.character(County), ''), hjust = 0, vjust = 0))
+  geom_text(aes(label = ifelse((PC2<(-6)&PC1<(-5)), County, ''), hjust = 0, vjust = 0))
 ```
 
 #### (v) Do you notice any outlier counties? If so, which counties, and why do you think they are outliers?
