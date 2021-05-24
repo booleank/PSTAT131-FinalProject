@@ -82,7 +82,7 @@ candidate is overrepresented in the sample, this error can be estimated to some 
 ### Question 0 (b)
 What was unique to Nate Silver's approach in 2012 that allowed him to achieve good predictions?
 
-The mathematical model for the proportion of people saying they will vote for a candidate is the actual percentage + "house effect" + sampling variation.
+The mathematical model for the proportion of people saying they will vote for a candidate is the actual percentage + "house effect" + sampling variation. While 'house effect' and sampling variation can be estimated to a high degree based on past polling data, the actual percentage can have temporal shift based on various socio-political-economic factors. Every polling survey done over time provides a time series data of polling percentages. The traditional method was to compute the maximum of the polling percentages which are > 50%, Nate Silver computed the number of time series which end up above the 50% mark among all time series available. For states where no polling data was available, hierarchical clustering and Graph theory was used to estimate their polls.    
 
 ### Question 0 (c)
 What went wrong in 2016? What do you think should be done to make future predictions better?
