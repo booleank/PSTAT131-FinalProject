@@ -14,7 +14,7 @@ library(pander)
 library(tidyverse)
 library(ggmap)
 library(maps)
-setwd("~/Documents/Spring2021/PSTAT131/Project")
+setwd("~/Documents/Spring2021/PSTAT131/project-stage1")
 ```
 ### Project overview and expectations
 
@@ -82,7 +82,7 @@ candidate is overrepresented in the sample, this error can be estimated to some 
 ### Question 0 (b)
 What was unique to Nate Silver's approach in 2012 that allowed him to achieve good predictions?
 
-The mathematical model for the proportion of people saying they will vote for a candidate is the actual percentage + "house effect" + sampling variation. While 'house effect' and sampling variation can be estimated to a high degree based on past polling data, the actual percentage can have temporal shift based on various socio-political-economic factors. Every polling survey done over time provides a time series data of polling percentages. The traditional method was to compute the maximum of the polling percentages which are > 50%, Nate Silver computed the number of time series which end up above the 50% mark among all time series available. For states where no polling data was available, hierarchical clustering and Graph theory was used to estimate their polls.    
+The mathematical model for the proportion of people saying they will vote for a candidate is the actual percentage + "house effect" + sampling variation. While 'house effect' and sampling variation can be estimated to a high degree based on past polling data, the actual percentage can have temporal shift based on various socio-political-economic factors. Every polling survey done over time provides a time series data of polling percentages. The traditional method was to compute the maximum of the polling percentages which are > 50%, Nate Silver computed the number of time series which end up above the 50% mark among all time series available. For states where no polling data was available, hierarchical clustering and Graph theory was used to estimate their polls.
 
 ### Question 0 (c)
 What went wrong in 2016? What do you think should be done to make future predictions better?
@@ -131,8 +131,12 @@ Drop these observations -- please write over `election_raw` -- and report the da
 # filter out fips == 2000
 election_raw <- election_raw %>%
   filter(fips != 2000)
+
 # print dimensions
-dim(election_raw)
+elec_dim <- dim(election_raw)
+data.frame(rows = elec_dim[1],
+           columns = elec_dim[2]) %>%
+  pander()
 ```
 
 ## Census data
@@ -166,9 +170,6 @@ Separate `election_raw` into separate federal-, state-, and county-level datafra
 
 ```{r}
 # create one dataframe per observational unit
-election_raw %>%
-  group_by(fips)
-
 election_federal <- election_raw %>%
   filter(fips == 'US')
 
@@ -292,23 +293,21 @@ Here you'll aggregate the census data to county level. Follow these steps:
   + remove the grouping structure.
     
 Store the result as `census_tidy` and print the first 3 rows and 7 columns. Format the output nicely using `pander()`.
-```{r}
+```{r message = F}
 census_tidy <- census_clean_weighted %>%
   group_by(State, County) %>%
-  mutate(across(where(is.numeric), sum)) %>%
-  ungroup() %>%
-  distinct()
+  summarize(across(where(is.numeric), sum)) %>%
+  ungroup()
   
 # print first few rows/columns
 census_tidy %>% 
   select(1:7) %>%
   head(3) %>% 
   pander()
-names(census_tidy)
 ```
 
 You can check your final result by comparison with the reference dataset in the .Rmd file for this document containing the first 20 rows of the tidy data.
-```{r}
+```{r eval = F}
 load('data/census-tidy-ref.RData')
 census_ref
 ```
@@ -320,8 +319,6 @@ Now that you have tidy versions of the census and election data, and a merged da
 # clean up environment
 keep <- c('census_tidy', 'election_federal', 'election_state', 'election')
 rm(list = setdiff(ls(), keep))
-election %>% filter(county == "Barbour County")
-
 ```
 
 \newpage
@@ -382,7 +379,7 @@ left_join(states, state_winner) %>%
 
 ### Question 2 (b) 
 Follow the example above to create a map of the election winner by county. The .Rmd file for this document contains codes to get you started.
-```{r message = FALSE}
+```{r message = FALSE, fig.width = 6}
 # plotting boundaries for US counties
 counties <- map_data("county")
 county_fips <- function(state, countyname){
@@ -423,7 +420,7 @@ Which variables drive variation among counties? Carry out PCA for the census dat
 x_mx <- census_tidy %>% 
   select(-c('State', 'County')) %>% 
   scale(center = T, scale = T)
-census_tidy
+
 # compute loadings for PC1 and PC2
 x_svd <- svd(x_mx)
 loadings <- x_svd$v
@@ -446,7 +443,7 @@ loadings[, 1:2] %>%
 
 #### (ii) Interpret the loading plot. Which variables drive the variation in the data?  
 
-```{r}
+```{r eval = F}
 loadings[,1:2] %>% 
   as.data.frame() %>%
   mutate(loading_sum = abs(V1)+abs(V2)) %>%
@@ -455,7 +452,7 @@ loadings[,1:2] %>%
   arrange(desc(loading_sum)) %>%
   head(n = 7)
 ```
- 
+\
 The variables with the highest loading magnitudes drive variation in the data. These variables include working-from-home rate, solo-commuter rate, 'White' and 'Minority' population percentages, poverty rate, self-employment rate, and percent of the workforce in private industry. 
 
 General information about income and employment, such as Poverty, Income Per Capita, Employment and Unemployment, corresponds to PC1. Specific professional information, such as Commuter Rate, Work at Home Rate, and Private Work Rate corresponds to PC2. 
@@ -468,9 +465,9 @@ d_sq <- x_svd$d^2/(nrow(x_mx) - 1)
 
 tibble(pc_var = d_sq,
        pc = paste('PC', 1:ncol(x_mx), sep = '')) %>%
-  ggplot(aes(x = fct_reorder(pc, desc(pc_var)), 
+  ggplot(aes(x = fct_reorder(pc, desc(pc_var)),
              y = cumsum(pc_var)/sum(pc_var))) +
-  geom_point() + 
+  geom_point() +
   geom_path() +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, size = 6)) +
@@ -478,7 +475,7 @@ tibble(pc_var = d_sq,
 
 sum(d_sq[1:2])/sum(d_sq)
 ```
-
+\
 The first two PC's capture 41.44% of the total variation.  
 
 
@@ -493,7 +490,8 @@ census_pc <- census_pc %>% mutate(County = census_tidy$County)
 census_pc %>%
   ggplot(aes(PC1, PC2)) +
   geom_point(size = 0.4, alpha = 0.6) +
-  geom_text(aes(label = ifelse((PC2<(-6)&PC1<(-5)), County, ''), hjust = 0, vjust = 0))
+  geom_text(aes(label = ifelse((PC2<(-6)&PC1<(-5)), County, ''), hjust = 0, vjust = 0), nudge_x = 0.1, size = 3) +
+  theme_bw()
 ```
 
 #### (v) Do you notice any outlier counties? If so, which counties, and why do you think they are outliers?
@@ -501,7 +499,7 @@ census_pc %>%
 # scratch work here
 
 ```
-
+\
 The Kusilvak Census Area is a clear outlier. It has a significantly lower PC2 value than any other county. Oglala Lakota and Todd Counties also have exceptionally low combinations of PC1 and PC2 loading values. Each of these counties have majority Native American populations and exceptionally low income per capita. In fact, they are the three poorest counties in the 50 states according to public data. 
 
 ### Question 2 (d)
@@ -546,7 +544,7 @@ merged_data %>%
   group_by(county, state) %>%
   slice_max(votes) %>%
   ggplot(aes(Minority, Poverty)) +
-  geom_point(aes(color = candidate), size = 0.7) +
+  geom_point(aes(color = candidate), size = 0.7, alpha = 0.5) +
   xlab('% Minority') +
   ylab('% Under the Poverty Level') +
   ggtitle('Election outcomes in counties by minority and poverty percentages')
@@ -626,7 +624,7 @@ These descriptions don't need to be long, just enough to convey the general idea
 #### Task 1
 
 **Task**:
-Based on the given data we try to predict the winner of general election 2016 in each state and check how the model performs. 
+Based on the given data we try to predict the winner of general election 2016 in each state and check how the model performs.
 
 **Methods**:
 Since we want to classify the winning states for the winning candidate, we are looking for the best classification method among the following:
@@ -641,7 +639,8 @@ Then we check which method performs best.
 #### Task 2
 
 **Task**:
-Since the outcome of election is predicted based on covariates, we may try an optimal clustering of those points in feature space. That way we may try to explain the varibility in election performance. 
+Since the outcome of election is predicted based on covariates, we may try an optimal clustering of those points in feature space. That way we may try to explain the varibility in election performance.
+
 
 **Methods**:
 Clustering method.
