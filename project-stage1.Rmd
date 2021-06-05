@@ -621,27 +621,28 @@ Propose an analysis that you'd like to carry out. Be specific: indicate two task
 
 These descriptions don't need to be long, just enough to convey the general idea. Also, these are not final commitments -- you can always change your mind later on if you like.
 
-#### Task 1
+#### Task 1 updated:
 
 **Task**:
-Based on the given data we try to predict the winner of general election 2016 in each state and check how the model performs.
+Based on the given data we try to predict the winner of general election 2016 in each state and check how the model prediction agrees with the results in each state. First we want to choose an optimal set of covariates to predict the response. For that we use Principal Component Analysis (PCA). Using scree/cumulative variability plot we determine at which PC the explained variability exceeds 80%, then use them as covariates for the above models we want to compare. We also check from the PC loadings plot to check which covariates weighs more than others in the PCs. That way we get some idea which covariates are more important. Then we want to classify the winning states for the winning candidate, we are looking for the best classification method among the following:
 
-**Methods**:
-Since we want to classify the winning states for the winning candidate, we are looking for the best classification method among the following:
 1) Logistic regression.
 2) K nearest neighbor (KNN).
 3) Linear Discriminant Analysis.
 4) Quadratic discriminant analysis.
 5) Regression Tree.
 
-Then we check which method performs best.
-
-#### Task 2
-
-**Task**:
-Since the outcome of election is predicted based on covariates, we may try an optimal clustering of those points in feature space. That way we may try to explain the varibility in election performance.
+After predicting the probabilities we compute the optimum threshold from using Youden's statistic and classify the winning or losing states accordingly. Then we compare the FPR and FNR for each model and come up with 3 best models interms of performance and assumptions.
 
 
 **Methods**:
-Clustering method.
+Binary classification methods in supervised learning.
+
+#### Task 2 updated:
+
+**Task**:
+Since the outcome of election is predicted based on covariates, we may try an optimal clustering of those points in feature space. That way we may try to explain the varibility in election performance without utilizing the response data. Each observation represents a state, hence each cluster consists of some states which are more similar in terms of certain characteristics than other states, out goal is to understand what those characteristics could be and if that has played a role to change the model performance in those clusters. We want to run the 3 best classifiers in each cluster to check if predictive power is improving or worsening due to clustering.
+
+**Methods**:
+Clustering method for unsupervised learning. Classification models in those clusters for supervised learning.
 
