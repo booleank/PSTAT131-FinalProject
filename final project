@@ -1,0 +1,72 @@
+---
+title: "PSTAT 131/231 Final Project"
+author: "gang"
+date: "6/7/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, 
+                      fig.align = 'center',
+                      fig.height = 4, 
+                      fig.width = 4)
+
+library(pander)
+library(tidyverse)
+library(ggmap)
+```
+
+## PC Analysis
+
+```{r, echo =F, eval = F}
+# center and scale
+x_mx <- merged_data %>% 
+  select(-c('county', 'state', 'candidate')) %>% 
+  scale(center = T, scale = T)
+# compute loadings for PC1 and PC2
+x_svd <- svd(x_mx)
+d_sq <- x_svd$d^2/(nrow(x_mx) - 1)
+loadings <- x_svd$v
+# Loadings plot
+loadings[, 1:10] %>%
+  as.data.frame() %>%
+  rename(PC1 = V1, PC2 = V2) %>%
+  mutate(variable = colnames(x_mx)) %>%
+  gather(key = 'PC', value = 'Loading', 1:10) %>%
+  arrange(variable) %>%
+  ggplot(aes(x = variable, y = Loading)) +
+  geom_point(aes(shape = PC, color = PC)) +
+  theme_bw() +
+  geom_hline(yintercept = 0, color = 'blue') +
+  geom_path(aes(linetype = PC, group = PC, color = PC)) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(x = '')
+
+```
+
+
+## Using a scree and cumulatie variance plot to observe the correct amounnt of PC's to use in the regression models
+```{r }
+## scree and cumulative variance plots
+tibble(PC = 1:min(dim(x_mx)),
+       Proportion = d_sq/sum(d_sq),
+       Cumulative = cumsum(Proportion)) %>%
+  gather(key = 'measure', value = 'Variance Explained', 2:3) %>%
+  ggplot(aes(x = PC, y = `Variance Explained`)) +
+  geom_point() +
+  geom_path() +
+  facet_wrap(~ measure) +
+  theme_bw() +
+  scale_x_continuous(breaks = 1:31, labels = as.character(1:31)) +
+  geom_hline(yintercept = 0.8, 
+             color = 'red', 
+             linetype = 2)
+sum(d_sq[1:10])/sum(d_sq)
+```
+## To capture 79.41% of the total variation, we need to use the first 10 PC's.
+
+
+```{r }
+## Next
+
+```
