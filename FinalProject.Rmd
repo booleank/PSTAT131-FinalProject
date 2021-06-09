@@ -19,7 +19,7 @@ setwd("~/Documents/Spring2021/PSTAT131/final-project")
 
 ```{r echo = F}
 # load data
-load('data/merged_data.RData')
+load('merged_data.RData')
 ```
 
 ## PC Analysis
