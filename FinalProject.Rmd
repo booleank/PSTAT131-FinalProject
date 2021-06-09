@@ -1,0 +1,79 @@
+---
+title: "PSTAT 131/231 Final Project"
+author: "gang"
+date: "6/7/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, 
+                      fig.align = 'center',
+                      fig.height = 4, 
+                      fig.width = 4)
+
+library(pander)
+library(tidyverse)
+library(ggmap)
+setwd("~/Documents/Spring2021/PSTAT131/final-project")
+```
+
+```{r echo = F}
+# load data
+load('data/merged_data.RData')
+```
+
+## PC Analysis
+
+```{r, echo = F, fig.width = 7, fig.height = 7}
+# center and scale
+x_mx <- merged_data %>% 
+  select(-c('county', 'state', 'candidate')) %>% 
+  scale(center = T, scale = T)
+# compute loadings for PC1 and PC2
+x_svd <- svd(x_mx)
+d_sq <- x_svd$d^2/(nrow(x_mx) - 1)
+loadings <- x_svd$v
+# Loadings plot
+loadings[, 1:10] %>%
+  as.data.frame() %>%
+  rename(PC1 = V1, PC2 = V2, PC3 = V3, PC4 = V4, PC5 = V5, 
+         PC6 = V6, PC7 = V7, PC8 = V8, PC9 = V9, PC10 = V10) %>%
+  mutate(variable = colnames(x_mx)) %>%
+  gather(key = 'PC', value = 'Loading', 1:10) %>%
+  arrange(variable) %>%
+  ggplot(aes(x = Loading, y = variable)) +
+  geom_point(aes(color = PC), size = 0.5) +
+  facet_wrap(~ PC) +
+  theme_bw(base_size = 6) +
+  geom_vline(xintercept = 0, color = 'blue') +
+  geom_path(aes(group = PC, color = PC)) +
+  labs(y = '')
+```
+
+
+## Scree and Cumulative Variance Plot
+Using a scree and cumulative variance plot to observe the correct amount of PC's to use in the regression models.
+```{r echo = F, fig.width = 5}
+## scree and cumulative variance plots
+tibble(PC = 1:min(dim(x_mx)),
+       Proportion = d_sq/sum(d_sq),
+       Cumulative = cumsum(Proportion)) %>%
+  gather(key = 'measure', value = 'Variance Explained', 2:3) %>%
+  ggplot(aes(x = PC, y = `Variance Explained`)) +
+  geom_point(size = 0.75) +
+  geom_path() +
+  facet_wrap(~ measure) +
+  theme_bw(base_size = 6) +
+  scale_x_continuous(breaks = 1:31, labels = as.character(1:31)) +
+  geom_hline(yintercept = 0.8,
+             color = 'red',
+             linetype = 2)
+sum(d_sq[1:10])/sum(d_sq)
+```
+To capture 79.41% of the total variation, we need to use the first 10 PC's.
+
+
+```{r }
+## Next
+
+```
