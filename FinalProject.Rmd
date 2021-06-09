@@ -14,6 +14,9 @@ knitr::opts_chunk$set(echo = T,
 library(pander)
 library(tidyverse)
 library(ggmap)
+library(modelr)
+library(class)
+library(splines)
 setwd("~/Documents/Spring2021/PSTAT131/final-project")
 ```
 
@@ -72,8 +75,41 @@ sum(d_sq[1:10])/sum(d_sq)
 ```
 To capture 79.41% of the total variation, we need to use the first 10 PC's.
 
-
-```{r }
-## Next
-
+```{r}
+# get PC data for first 10 PCs
+v_q <- loadings[, 1:10]
+Z <- x_mx %*% v_q
+colnames(v_q) <- colnames(Z) <- paste('PC', 1:10, sep = '')
+pc_data <- tibble(winner = factor(merged_data$candidate)) %>%
+  bind_cols(as_data_frame(Z))
+pc_data
 ```
+
+## Logistic Regression
+```{r }
+# Logistic regression model using first 10 PCs
+glm_model <- glm(winner ~ ., family = 'binomial', data = pc_data)
+summary(glm_model)
+
+# compute estimated probabilities
+p_hat_glm <- predict(glm_model, pc_data, type = 'response')
+
+# bayes classifier
+y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('Yes', 'No'))
+
+# errors
+error_glm <- table(y = merged_data$candidate, y_hat_glm)
+error_glm
+```
+
+## K Nearest Neighbors
+```{r}
+# 10-nearest neighbors
+y <- (pc_data %>% pull(winner))
+y_hat_knn <- knn(train = pc_data[-1], test = pc_data[-1], cl = y, k = 10)
+
+# misclassifications
+table(y, y_hat_knn)
+```
+
+
