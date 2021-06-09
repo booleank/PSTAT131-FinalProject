@@ -82,7 +82,9 @@ Z <- x_mx %*% v_q
 colnames(v_q) <- colnames(Z) <- paste('PC', 1:10, sep = '')
 pc_data <- tibble(winner = factor(merged_data$candidate)) %>%
   bind_cols(as_data_frame(Z))
-pc_data
+pc_data$winner <- fct_collapse(pc_data$winner,
+                             win = 'Donald Trump',
+                             loss = c('Evan McMullin', 'Gary Johnson', 'Hillary Clinton'))
 ```
 
 ## Logistic Regression
@@ -95,10 +97,10 @@ summary(glm_model)
 p_hat_glm <- predict(glm_model, pc_data, type = 'response')
 
 # bayes classifier
-y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('Yes', 'No'))
+y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('win', 'loss'))
 
 # errors
-error_glm <- table(y = merged_data$candidate, y_hat_glm)
+error_glm <- table(y = pc_data$winner, y_hat_glm)
 error_glm
 ```
 
