@@ -1,0 +1,103 @@
+---
+title: "Your title here"
+author: "Your names here"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, 
+                      message = F,
+                      warning = F,
+                      fig.align = 'center',
+                      fig.height = 4, 
+                      fig.width = 4)
+
+# libraries here
+
+```
+
+
+### General report guidelines
+
+This outline provides a generic set of sections that you can use as either a starting point or a template to prepare your project report. You are not required to use these exact sections if another structure would be more natural for your specific project. 
+
+Below each section header in the outline are some comments about what kind of material that section should contain to help you get started. **If you use this document as a template, please remove all guidance and instructions, including this text, and replace the document title and author with an appropriate title for your project and your group members' names.**
+
+If you choose to use a different set of section headers, your report should include the following elements.
+
+1. A brief introduction to the topic of analyzing/predicting elections and the specific tasks you took up for the project (2-5 paragraphs).
+2. A description of the census and election data (raw records) and how it was preprocessed for your analysis (2-3 paragraphs + a few example rows).
+3. A brief description of the methods used in your analysis and what they are used to accomplish (2-3 paragraphs).
+4. A summary of your results (3-5 paragraphs + figures/tables).
+5. A brief discussion providing commentary on your results (1-2 paragraphs).
+
+If desired, you can include a code appendix; however, this is not required. The main body of the report does not need to be long. Aim for 4-8 pages with figures and tables.
+
+#### Formatting and appearance
+
+Formatting guidelines are simple:
+
+* R codes should not be included in the body of the report;
+* all R output should be formatted nicely (usually `pander()` works with summaries, tables, etc.);
+* all figures should be appropriately sized and labeled;
+* tables and figures should include a brief caption;
+* the body of the report should not exceed 10 pages;
+* no instructions or guidance provided with this template should appear in your report.
+
+#### Evaluation criteria
+
+We'll evaluate your report according to the following criteria:
+
+* (formatting, 5pt) formatting guidelines are followed;
+* (apparent accuracy, 5pt) results appear plausible;
+* (correctness, 10pt) results are properly interpreted, data and methods are correctly described;
+* (clarity, 10pt) overall writing and organization is clear and easy to follow.
+
+Please notice that there is no credit tied to how 'successful' the analysis was, or the degree to which the project produced novel insights into the 2016 election. If your work doesn't pan out as you'd hoped -- for example, if predictions are poor, or you don't find any significant patterns of the type you'd searched for -- you can still receive a perfect score if you follow the guidelines, avoid errors in computation, and describe your results 
+accurately and clearly.
+
+---
+
+# Introduction
+
+This section should serve to orient the reader to the topic (analysis of the 2016 election) and then indicate the content of the report (specific tasks that you took up for the project). Provide one short paragraph introducing the topic, and another introducing your project tasks.
+
+For a general introduction, you might find it useful to adapt what your group wrote in the background questions on the interim report. This is probably most appropriate if your focus is on prediction; if not, you may wish to compose this anew.
+
+For an introduction to your project tasks, a few short sentences is usually sufficient. For example:
+
+> "For this project, we first sought to predict the winning candidate in each county and identify demographic variables that were predictive of the election outcome. Using a logistic regression model, we achieved XX% predictive accuracy and found that X, Y, Z were significantly associated with the outcome. Then, we sought to understand the geographic heterogeneity of these predictive variables across U.S. counties. We used $K$-means clustering and identified three regional clusters and two geographically distributed clusters."
+
+# Materials and methods
+
+This section should describe your data and the methods you used. Both descriptions should be succinct -- just detailed enough to help the reader imagine what you did. This is always a bit of a balancing act.
+
+## Datasets
+
+Describe the raw data sources -- census and election data. Then provide a description of the preprocessing that you did in stage 1; this does not need to cover every step, but again, should enable the reader to imagine the process. They should grasp that you took aggregated tract-level census data to the county level and merged this with election data. The aggregation is probably helpful to describe in a little detail, but the conversions of population structure variables to percentages are not necessary to mention.
+
+Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.
+
+## Methods
+
+Describe the methods you use and how you use them. Think of this as providing a road map to your analysis -- a reader should be able to retrace your steps and carry out your analysis by studying this section. A helpful organizational principle may be to tackle this by task -- describe how you approached each task in turn. 
+
+While it's not necessary to explain each method from first principles, some exposition of the method should be included. This can be quite simple, as in the example below.
+
+> To predict the winning candidate in each county and identify demographic variables that were predictive of the election outcome, logistic regression was used to model the probabilities that either major candidate won a county. Specifically, model inputs were an indicator for whether Trump won (response) and the census information for the corresponding county (covariates):
+
+$$\text{logit}\left[P\left(\text{Trump win}\right)_i\right] = \beta_0 + \beta_1 \text{white}_i + \cdots + \beta_{10} \text{income}_i\;,\quad \text{county } i = 1, \dots, 2148$$
+
+> Parameters were estimated by maximum likelihood on 80% of the data and predictive accuracy was assessed on the remaining 20%.
+
+
+# Results
+
+This section should present and describe your results as succinctly as possible. Usually, this is done by showing and explaining figures and tables; I'd strongly recommend deciding first what figures and tables you wish to show, and then writing the section around those. You don't need to show *everything* you did (though that temptation is certainly strong at times), but just the key pieces needed to communicate the outcome. A helpful organizational principle would be to structure this section into two subsections, one for each task.
+
+# Discussion
+
+This final section should briefly reflect on your results, offering any interpretations or commentary. You can also include any other thoughts you wish to share with the reader (unexpected difficulties, promising follow-ups, caveats in certain results, etc.). 
+
+Begin by reiterating in a few sentences what was done; then offer your commentary and other discussion.
