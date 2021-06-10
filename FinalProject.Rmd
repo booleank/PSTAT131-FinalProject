@@ -238,4 +238,108 @@ rf_errors <- table(class = y, pred = y_hat)
 misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_data)
 misclass_rf
 ```
-Random forest shows lowest total misclass.
+#Random forest shows lowest total misclass.
+
+## Linear Discriminant Analysis (LDA):
+```{r}
+# fit lda model
+fit_lda <- MASS::lda(winner ~ ., method = 'mle', data = pc_data_rf)
+
+# compute estimated classes
+preds_lda <- predict(fit_lda, pc_data_rf)
+
+# cross-tabulate estimated and true classes
+errors_lda <- table(class = pc_data_rf$winner, pred = preds_lda$class)
+misclass_lda = 1-sum(diag(errors_lda))/nrow(pc_data)
+misclass_lda
+
+# roc curve for lda
+prediction_lda <- prediction(predictions = preds_lda$posterior[, 2], labels = pc_data_rf$winner)
+
+# compute error rates as a function of probability threshhold
+perf_lda <- performance(prediction.obj = prediction_lda, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_lda <- tibble(fpr = slot(perf_lda, 'x.values'),
+                  tpr = slot(perf_lda, 'y.values'),
+                  thresh = slot(perf_lda, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'lda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_lda %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_lda, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_lda, youden)
+
+# recalibrate qda with different probability threshold
+preds_lda_adj <- factor(preds_qda$posterior[, 2] > optimal_thresh$thresh,
+                        labels = c(0, 1))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_lda_adj <- table(class = pc_data_rf$winner, pred = preds_lda_adj)
+misclass_lda_adj = 1-sum(diag(errors_lda_adj))/nrow(pc_data)
+misclass_lda_adj
+
+```
+
+
+## Quadratic Discriminant Analysis (QDA):
+```{r}
+# fit qda model
+fit_qda <- MASS::qda(winner ~ ., method = 'mle', data = pc_data_rf)
+
+# compute estimated classes
+preds_qda <- predict(fit_qda, pc_data_rf)
+
+# cross-tabulate estimated and true classes
+errors_qda <- table(class = pc_data_rf$winner, pred = preds_qda$class)
+misclass_qda = 1-sum(diag(errors_qda))/nrow(pc_data)
+misclass_qda
+
+# roc curve for qda
+prediction_qda <- prediction(predictions = preds_qda$posterior[, 2], labels = pc_data_rf$winner)
+
+# compute error rates as a function of probability threshhold
+perf_qda <- performance(prediction.obj = prediction_qda, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_qda <- tibble(fpr = slot(perf_qda, 'x.values'),
+                  tpr = slot(perf_qda, 'y.values'),
+                  thresh = slot(perf_qda, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'qda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_qda %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_qda, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_qda, youden)
+
+# recalibrate qda with different probability threshold
+preds_qda_adj <- factor(preds_qda$posterior[, 2] > optimal_thresh$thresh,
+                        labels = c(1, 0))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_qda_adj <- table(class = pc_data_rf$winner, pred = preds_qda_adj)
+misclass_qda_adj = 1-sum(diag(errors_qda_adj))/nrow(pc_data)
+misclass_qda_adj
+
+```
+
