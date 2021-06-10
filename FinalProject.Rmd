@@ -17,20 +17,28 @@ library(ggmap)
 library(modelr)
 library(class)
 library(splines)
+library(tree)
+library(maptree)
+library(gbm)
 setwd("~/Documents/Spring2021/PSTAT131/final-project")
 ```
 
 ```{r echo = F}
 # load data
-load('merged_data.RData')
+load('merged_data2.RData')
 ```
 
 ## PC Analysis
 
 ```{r, echo = F, fig.width = 7, fig.height = 7}
 # center and scale
-x_mx <- merged_data %>% 
-  select(-c('county', 'state', 'candidate')) %>% 
+county_win_data <- merged_data2 %>%
+  group_by(fips) %>%
+  slice_max(votes) %>%
+  ungroup()
+
+x_mx <- county_win_data %>% 
+  select(-c('county':'pct')) %>% 
   scale(center = T, scale = T)
 # compute loadings for PC1 and PC2
 x_svd <- svd(x_mx)
@@ -71,32 +79,33 @@ tibble(PC = 1:min(dim(x_mx)),
   geom_hline(yintercept = 0.8,
              color = 'red',
              linetype = 2)
-sum(d_sq[1:10])/sum(d_sq)
+sum(d_sq[1:8])/sum(d_sq)
 ```
-To capture 79.41% of the total variation, we need to use the first 10 PC's.
+To capture 77.8% of the total variation, we need to use the first 8 PC's.
 
 ```{r}
-# get PC data for first 10 PCs
-v_q <- loadings[, 1:10]
+# get PC data for first 8 PCs
+v_q <- loadings[, 1:8]
 Z <- x_mx %*% v_q
-colnames(v_q) <- colnames(Z) <- paste('PC', 1:10, sep = '')
-pc_data <- tibble(winner = factor(merged_data$candidate)) %>%
+
+colnames(v_q) <- colnames(Z) <- paste('PC', 1:8, sep = '')
+pc_data <- tibble(winner = factor(county_win_data$candidate)) %>%
   bind_cols(as_data_frame(Z))
 pc_data$winner <- fct_collapse(pc_data$winner,
-                             win = 'Donald Trump',
-                             loss = c('Evan McMullin', 'Gary Johnson', 'Hillary Clinton'))
+                             Don = 'Donald Trump',
+                             Hill = 'Hillary Clinton')
 ```
 
 ## Logistic Regression
 ```{r }
-# Logistic regression model using first 10 PCs
+# Logistic regression model using first 8 PCs
 glm_model <- glm(winner ~ ., family = 'binomial', data = pc_data)
 
 # compute estimated probabilities
 p_hat_glm <- predict(glm_model, pc_data, type = 'response')
 
 # bayes classifier
-y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('win', 'loss'))
+y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('Don', 'Hill'))
 
 # errors
 error_glm <- table(y = pc_data$winner, y_hat_glm)
@@ -110,11 +119,9 @@ tot_misclass_glm
 
 ## K Nearest Neighbors
 ```{r}
-y <- (pc_data %>% pull(winner))
-
 # leave one out cross validation
 cv_out <- tibble(k = seq_range(5:100, n = 20, pretty = T)) %>%
-  mutate(loocv_preds = map(k, ~ knn.cv(pc_data[-1], y, .x)),
+  mutate(loocv_preds = map(k, ~knn.cv(pc_data[-1], y, .x)),
          class = map(k, ~ y)) %>%
   mutate(misclass = map2(loocv_preds, class, 
                          ~ as.numeric(.x) - as.numeric(.y))) %>%
@@ -147,3 +154,85 @@ tot_misclass_knn
 ```
 
 So far KNN performed better than logistic regression, based on the total misclassification error rate metric.
+
+
+## Establish Testing/Training Sets... (haven't used yet)
+```{r}
+# set rng
+set.seed(20121)
+
+# partition data
+county_part <- resample_partition(pc_data, c(test = .3, train = .7))
+test <- county_part$test
+train <- county_part$train
+testdata <- pc_data %>% slice(test$idx)
+traindata <- pc_data %>% slice(train$idx)
+```
+
+
+## Regression Tree
+```{r}
+#initial tree
+nmin <- 5
+tree_opts <- tree.control(nobs = nrow(pc_data), 
+                          minsize = nmin, 
+                          mindev = 0)
+t_0 <- tree(winner ~ ., data = pc_data,
+                control = tree_opts, split = 'deviance') 
+
+nfolds <- 25
+cv_out <- cv.tree(t_0, K = nfolds)
+cv_df <- tibble(alpha = cv_out$k,
+                impurity = cv_out$dev,
+                size = cv_out$size)
+best_alpha <- slice_min(cv_df, impurity) %>%
+  slice_min(size)
+
+# prune initial tree
+t_opt <- prune.tree(t_0, k = best_alpha$alpha)
+
+# plot
+draw.tree(t_opt, cex = 0.8, size = 2, digits = 1)
+
+# class probabilities on test partition
+probs <- predict(t_opt, pc_data)
+
+# predicted class labels
+preds <- factor(probs[, 2] > 0.5, labels = c('Don', 'Hill'))
+
+# misclassification error rates
+error_tree <- table(pred = preds, class = pc_data$winner)
+misclass_tree = 1-sum(diag(error_tree))/sum(error_tree)
+misclass_tree
+```
+
+
+## Random Forest 
+```{R}
+pc_data_rf <- pc_data %>%
+  mutate(winner = ifelse(winner == "Hill",0,1))
+traindata <- traindata %>%
+      mutate(winner = ifelse(winner == "Hill",0,1))
+testdata <- testdata %>%
+      mutate(winner = ifelse(winner == "Hill",0,1))
+
+
+
+fit_gbm <- gbm(winner ~ ., data = pc_data_rf, distribution ='adaboost', interaction.depth =3, n.trees =100, cv.folds = 5)
+
+# select boosting iterations
+best_m <- gbm.perf(fit_gbm, method ='cv')
+
+# compute predictions on test set
+preds <- predict(fit_gbm, pc_data_rf, n.trees = best_m)
+probs <-1/(1+ exp(-preds))
+y_hat <- factor(probs >0.5, labels = c('Don','Hill'))
+y <- factor(pc_data_rf$winner, labels = c('Don','Hill'))
+
+# compute misclassification errors
+rf_errors <- table(class = y, pred = y_hat)
+misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_data)
+misclass_rf
+```
+Random forest shows lowest misclass
+
