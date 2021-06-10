@@ -40,10 +40,12 @@ county_win_data <- merged_data2 %>%
 x_mx <- county_win_data %>% 
   select(-c('county':'pct')) %>% 
   scale(center = T, scale = T)
+
 # compute loadings for PC1 and PC2
 x_svd <- svd(x_mx)
 d_sq <- x_svd$d^2/(nrow(x_mx) - 1)
 loadings <- x_svd$v
+
 # Loadings plot
 loadings[, 1:10] %>%
   as.data.frame() %>%
@@ -76,7 +78,7 @@ tibble(PC = 1:min(dim(x_mx)),
   facet_wrap(~ measure) +
   theme_bw(base_size = 6) +
   scale_x_continuous(breaks = 1:31, labels = as.character(1:31)) +
-  geom_hline(yintercept = 0.8,
+  geom_hline(yintercept = 0.778,
              color = 'red',
              linetype = 2)
 sum(d_sq[1:8])/sum(d_sq)
@@ -92,36 +94,51 @@ colnames(v_q) <- colnames(Z) <- paste('PC', 1:8, sep = '')
 pc_data <- tibble(winner = factor(county_win_data$candidate)) %>%
   bind_cols(as_data_frame(Z))
 pc_data$winner <- fct_collapse(pc_data$winner,
-                             Don = 'Donald Trump',
-                             Hill = 'Hillary Clinton')
+                               Don = 'Donald Trump',
+                               Hill = 'Hillary Clinton')
+```
+
+## Split Data (Train/Test)
+```{r}
+# set rng
+set.seed(20121)
+
+# partition data
+county_part <- resample_partition(pc_data, c(test = .3, train = .7))
+test <- county_part$test
+train <- county_part$train
+testdata <- pc_data %>% slice(test$idx)
+traindata <- pc_data %>% slice(train$idx)
 ```
 
 ## Logistic Regression
 ```{r }
-# Logistic regression model using first 8 PCs
-glm_model <- glm(winner ~ ., family = 'binomial', data = pc_data)
+# Logistic regression model on training data using first 8 PCs
+glm_model <- glm(winner ~ ., family = 'binomial', data = traindata)
 
 # compute estimated probabilities
-p_hat_glm <- predict(glm_model, pc_data, type = 'response')
+p_hat_glm <- predict(glm_model, testdata, type = 'response')
 
 # bayes classifier
 y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('Don', 'Hill'))
 
 # errors
-error_glm <- table(y = pc_data$winner, y_hat_glm)
+error_glm <- table(y = testdata$winner, y_hat_glm)
 error_glm
 
 # total misclassification rate
-tot_misclass_glm <- 1 - sum(diag(error_glm))/nrow(pc_data)
+tot_misclass_glm <- 1 - sum(diag(error_glm))/nrow(testdata)
 tot_misclass_glm
 ```
 
 
 ## K Nearest Neighbors
 ```{r}
+y <- (traindata %>% pull(winner))
+
 # leave one out cross validation
-cv_out <- tibble(k = seq_range(5:100, n = 20, pretty = T)) %>%
-  mutate(loocv_preds = map(k, ~knn.cv(pc_data[-1], y, .x)),
+cv_out <- tibble(k = seq_range(5:50, n = 20, pretty = T)) %>%
+  mutate(loocv_preds = map(k, ~ knn.cv(traindata[-1], y, .x)),
          class = map(k, ~ y)) %>%
   mutate(misclass = map2(loocv_preds, class, 
                          ~ as.numeric(.x) - as.numeric(.y))) %>%
@@ -141,33 +158,19 @@ cv_errors %>%
 # select k
 best_k <- cv_errors$k[which.min(cv_errors$error)]
 
-# re-train
-y_hat_knn <- knn.cv(train = pc_data[-1], cl = y, k = best_k)
+# re-train with best k
+y_hat_knn <- knn(train = traindata[-1], test = testdata[-1], cl = y, k = best_k)
 
 # misclassifications
-error_knn <- table(y, y_hat_knn)
+error_knn <- table(testdata$winner, y_hat_knn)
 error_knn
 
 # total misclassification rate
-tot_misclass_knn <- 1 - sum(diag(error_knn))/nrow(pc_data)
+tot_misclass_knn <- 1 - sum(diag(error_knn))/nrow(testdata)
 tot_misclass_knn
 ```
 
 So far KNN performed better than logistic regression, based on the total misclassification error rate metric.
-
-
-## Establish Testing/Training Sets... (haven't used yet)
-```{r}
-# set rng
-set.seed(20121)
-
-# partition data
-county_part <- resample_partition(pc_data, c(test = .3, train = .7))
-test <- county_part$test
-train <- county_part$train
-testdata <- pc_data %>% slice(test$idx)
-traindata <- pc_data %>% slice(train$idx)
-```
 
 
 ## Regression Tree
@@ -234,5 +237,4 @@ rf_errors <- table(class = y, pred = y_hat)
 misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_data)
 misclass_rf
 ```
-Random forest shows lowest misclass
-
+Random forest shows lowest total misclass.
