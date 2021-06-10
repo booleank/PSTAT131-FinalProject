@@ -20,6 +20,7 @@ library(splines)
 library(tree)
 library(maptree)
 library(gbm)
+library(ROCR)
 setwd("~/Documents/Spring2021/PSTAT131/final-project")
 ```
 
