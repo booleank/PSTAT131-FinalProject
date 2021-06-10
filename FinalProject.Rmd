@@ -91,7 +91,6 @@ pc_data$winner <- fct_collapse(pc_data$winner,
 ```{r }
 # Logistic regression model using first 10 PCs
 glm_model <- glm(winner ~ ., family = 'binomial', data = pc_data)
-summary(glm_model)
 
 # compute estimated probabilities
 p_hat_glm <- predict(glm_model, pc_data, type = 'response')
@@ -102,16 +101,49 @@ y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('win', 'loss'))
 # errors
 error_glm <- table(y = pc_data$winner, y_hat_glm)
 error_glm
+
+# total misclassification rate
+tot_misclass_glm <- 1 - sum(diag(error_glm))/nrow(pc_data)
+tot_misclass_glm
 ```
+
 
 ## K Nearest Neighbors
 ```{r}
-# 10-nearest neighbors
 y <- (pc_data %>% pull(winner))
-y_hat_knn <- knn(train = pc_data[-1], test = pc_data[-1], cl = y, k = 10)
+
+# leave one out cross validation
+cv_out <- tibble(k = seq_range(5:100, n = 20, pretty = T)) %>%
+  mutate(loocv_preds = map(k, ~ knn.cv(pc_data[-1], y, .x)),
+         class = map(k, ~ y)) %>%
+  mutate(misclass = map2(loocv_preds, class, 
+                         ~ as.numeric(.x) - as.numeric(.y))) %>%
+  mutate(error = map(misclass, ~ mean(abs(.x))))
+
+# error rates for each k
+cv_errors <- cv_out %>% 
+  select(k, error) %>% 
+  unnest(everything()) 
+
+# plot errors against k
+cv_errors %>%
+  ggplot() +
+  geom_line(aes(x = k, y = error), color = 'cornflowerblue') +
+  theme_bw()
+
+# select k
+best_k <- cv_errors$k[which.min(cv_errors$error)]
+
+# re-train
+y_hat_knn <- knn.cv(train = pc_data[-1], cl = y, k = best_k)
 
 # misclassifications
-table(y, y_hat_knn)
+error_knn <- table(y, y_hat_knn)
+error_knn
+
+# total misclassification rate
+tot_misclass_knn <- 1 - sum(diag(error_knn))/nrow(pc_data)
+tot_misclass_knn
 ```
 
-
+So far KNN performed better than logistic regression, based on the total misclassification error rate metric.
