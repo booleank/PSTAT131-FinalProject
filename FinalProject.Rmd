@@ -29,22 +29,36 @@ setwd("~/Documents/Spring2021/PSTAT131/final-project")
 load('merged_data2.RData')
 ```
 
-## PC Analysis
-
-```{r, echo = F, fig.width = 7, fig.height = 7}
-# center and scale
+## Data Preparation
+```{r}
+# filter out losing candidates by county => 1 row per county, 'candidate' is winner of the county
 county_win_data <- merged_data2 %>%
   group_by(fips) %>%
   slice_max(votes) %>%
   ungroup()
 
-x_mx <- county_win_data %>% 
+#center and scale
+x_mx <- county_win_data %>%
   select(-c('county':'pct')) %>% 
-  scale(center = T, scale = T)
+  scale(center = T, scale = T) #centers and scales data
 
+# set rng
+set.seed(20121)
+
+# partition data
+county_part <- resample_partition(as_tibble(x_mx), c(test = .3, train = .7))
+test <- county_part$test
+train <- county_part$train
+testdata <- as_tibble(x_mx) %>% slice(test$idx) #test dataframe
+traindata <- as_tibble(x_mx) %>% slice(train$idx) #training dataframe
+```
+
+## PC Analysis
+
+```{r, echo = F, fig.width = 7, fig.height = 7}
 # compute loadings for PC1 and PC2
-x_svd <- svd(x_mx)
-d_sq <- x_svd$d^2/(nrow(x_mx) - 1)
+x_svd <- svd(traindata)
+d_sq <- x_svd$d^2/(nrow(traindata) - 1)
 loadings <- x_svd$v
 
 # Loadings plot
@@ -52,7 +66,7 @@ loadings[, 1:10] %>%
   as.data.frame() %>%
   rename(PC1 = V1, PC2 = V2, PC3 = V3, PC4 = V4, PC5 = V5, 
          PC6 = V6, PC7 = V7, PC8 = V8, PC9 = V9, PC10 = V10) %>%
-  mutate(variable = colnames(x_mx)) %>%
+  mutate(variable = colnames(traindata)) %>%
   gather(key = 'PC', value = 'Loading', 1:10) %>%
   arrange(variable) %>%
   ggplot(aes(x = Loading, y = variable)) +
@@ -62,6 +76,7 @@ loadings[, 1:10] %>%
   geom_vline(xintercept = 0, color = 'blue') +
   geom_path(aes(group = PC, color = PC)) +
   labs(y = '')
+
 ```
 
 
@@ -69,7 +84,7 @@ loadings[, 1:10] %>%
 Using a scree and cumulative variance plot to observe the correct amount of PC's to use in the regression models.
 ```{r echo = F, fig.width = 5}
 ## scree and cumulative variance plots
-tibble(PC = 1:min(dim(x_mx)),
+tibble(PC = 1:min(dim(traindata)),
        Proportion = d_sq/sum(d_sq),
        Cumulative = cumsum(Proportion)) %>%
   gather(key = 'measure', value = 'Variance Explained', 2:3) %>%
@@ -84,62 +99,56 @@ tibble(PC = 1:min(dim(x_mx)),
              linetype = 2)
 sum(d_sq[1:8])/sum(d_sq)
 ```
-To capture 77.8% of the total variation, we need to use the first 8 PC's.
+To capture 78% of the total variation, we need to use the first 8 PC's.
 
 ```{r}
-# get PC data for first 8 PCs
-v_q <- loadings[, 1:8]
-Z <- x_mx %*% v_q
+# get training PC data for first 8 PCs
+v_q <- loadings[, 1:8] 
+Z_train <- as.matrix(traindata) %*% v_q #training PC's
+Z_test <- as.matrix(testdata) %*% v_q #test PC's, *calculated on training loadings*
 
-colnames(v_q) <- colnames(Z) <- paste('PC', 1:8, sep = '')
-pc_data <- tibble(winner = factor(county_win_data$candidate)) %>%
-  bind_cols(as_data_frame(Z))
-pc_data$winner <- fct_collapse(pc_data$winner,
+#construct testing and training dataframes
+colnames(v_q) <- colnames(Z_train) <- colnames(Z_test) <- paste('PC', 1:8, sep = '')
+pc_train <- tibble(winner = factor(county_win_data$candidate[train$idx])) %>%
+  bind_cols(as_data_frame(Z_train)) 
+pc_train$winner <- fct_collapse(pc_train$winner,
                                Don = 'Donald Trump',
                                Hill = 'Hillary Clinton')
-```
 
-## Split Data (Train/Test)
-```{r}
-# set rng
-set.seed(20121)
-
-# partition data
-county_part <- resample_partition(pc_data, c(test = .3, train = .7))
-test <- county_part$test
-train <- county_part$train
-testdata <- pc_data %>% slice(test$idx)
-traindata <- pc_data %>% slice(train$idx)
+pc_test <- tibble(winner = factor(county_win_data$candidate[test$idx])) %>%
+  bind_cols(as_data_frame(Z_test)) 
+pc_test$winner <- fct_collapse(pc_test$winner,
+                               Don = 'Donald Trump',
+                               Hill = 'Hillary Clinton')
 ```
 
 ## Logistic Regression
 ```{r }
 # Logistic regression model on training data using first 8 PCs
-glm_model <- glm(winner ~ ., family = 'binomial', data = traindata)
+glm_model <- glm(winner ~ ., family = 'binomial', data = pc_train)
 
 # compute estimated probabilities
-p_hat_glm <- predict(glm_model, testdata, type = 'response')
+p_hat_glm <- predict(glm_model, pc_test, type = 'response')
 
 # bayes classifier
 y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('Don', 'Hill'))
 
 # errors
-error_glm <- table(y = testdata$winner, y_hat_glm)
+error_glm <- table(y = pc_test$winner, y_hat_glm)
 error_glm
 
 # total misclassification rate
-tot_misclass_glm <- 1 - sum(diag(error_glm))/nrow(testdata)
+tot_misclass_glm <- 1 - sum(diag(error_glm))/nrow(pc_test)
 tot_misclass_glm
 ```
 
-
 ## K Nearest Neighbors
 ```{r}
-y <- (traindata %>% pull(winner))
+y <- (pc_train %>% pull(winner))
 
 # leave one out cross validation
 cv_out <- tibble(k = seq_range(5:50, n = 20, pretty = T)) %>%
-  mutate(loocv_preds = map(k, ~ knn.cv(traindata[-1], y, .x)),
+  mutate(loocv_preds = map(k, ~ knn.cv(pc_train[-1], y, .x)),
          class = map(k, ~ y)) %>%
   mutate(misclass = map2(loocv_preds, class, 
                          ~ as.numeric(.x) - as.numeric(.y))) %>%
@@ -160,28 +169,27 @@ cv_errors %>%
 best_k <- cv_errors$k[which.min(cv_errors$error)]
 
 # re-train with best k
-y_hat_knn <- knn(train = traindata[-1], test = testdata[-1], cl = y, k = best_k)
+y_hat_knn <- knn(train = pc_train[-1], test = pc_test[-1], cl = y, k = best_k)
 
 # misclassifications
-error_knn <- table(testdata$winner, y_hat_knn)
+error_knn <- table(pc_test$winner, y_hat_knn)
 error_knn
 
 # total misclassification rate
-tot_misclass_knn <- 1 - sum(diag(error_knn))/nrow(testdata)
+tot_misclass_knn <- 1 - sum(diag(error_knn))/nrow(pc_test)
 tot_misclass_knn
 ```
 
 So far KNN performed better than logistic regression, based on the total misclassification error rate metric.
 
-
 ## Regression Tree
 ```{r}
 #initial tree
 nmin <- 5
-tree_opts <- tree.control(nobs = nrow(pc_data), 
+tree_opts <- tree.control(nobs = nrow(pc_train), 
                           minsize = nmin, 
                           mindev = 0)
-t_0 <- tree(winner ~ ., data = pc_data,
+t_0 <- tree(winner ~ ., data = pc_train,
                 control = tree_opts, split = 'deviance') 
 
 nfolds <- 25
@@ -199,62 +207,63 @@ t_opt <- prune.tree(t_0, k = best_alpha$alpha)
 draw.tree(t_opt, cex = 0.8, size = 2, digits = 1)
 
 # class probabilities on test partition
-probs <- predict(t_opt, pc_data)
+probs <- predict(t_opt, pc_test)
 
 # predicted class labels
 preds <- factor(probs[, 2] > 0.5, labels = c('Don', 'Hill'))
 
 # misclassification error rates
-error_tree <- table(pred = preds, class = pc_data$winner)
-misclass_tree = 1-sum(diag(error_tree))/sum(error_tree)
+error_tree <- table(pred = preds, class = pc_test$winner)
+misclass_tree = 1-sum(diag(error_tree))/nrow(pc_test)
 misclass_tree
 ```
 
-
 ## Random Forest 
 ```{R}
-pc_data_rf <- pc_data %>%
-  mutate(winner = ifelse(winner == "Hill",0,1))
-traindata <- traindata %>%
-      mutate(winner = ifelse(winner == "Hill",0,1))
-testdata <- testdata %>%
-      mutate(winner = ifelse(winner == "Hill",0,1))
+pc_train_rf <- pc_train %>%
+  mutate(winner = ifelse(winner == "Hill",1,0))
+pc_test_rf <- pc_test %>%
+      mutate(winner = ifelse(winner == "Hill",1,0))
 
 
 
-fit_gbm <- gbm(winner ~ ., data = pc_data_rf, distribution ='adaboost', interaction.depth =3, n.trees =100, cv.folds = 5)
+fit_gbm <- gbm(winner ~ ., data = pc_train_rf, distribution ='adaboost', interaction.depth =3, n.trees =100, cv.folds = 5)
 
 # select boosting iterations
 best_m <- gbm.perf(fit_gbm, method ='cv')
 
 # compute predictions on test set
-preds <- predict(fit_gbm, pc_data_rf, n.trees = best_m)
+preds <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
 probs <-1/(1+ exp(-preds))
 y_hat <- factor(probs >0.5, labels = c('Don','Hill'))
-y <- factor(pc_data_rf$winner, labels = c('Don','Hill'))
+y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
+
+
 
 # compute misclassification errors
 rf_errors <- table(class = y, pred = y_hat)
-misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_data)
+misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_test)
 misclass_rf
+
+rf_errors
 ```
 #Random forest shows lowest total misclass.
 
 ## Linear Discriminant Analysis (LDA):
 ```{r}
 # fit lda model
-fit_lda <- MASS::lda(winner ~ ., method = 'mle', data = pc_data_rf)
+fit_lda <- MASS::lda(winner ~ ., method = 'mle', data = pc_train_rf)
 
 # compute estimated classes
-preds_lda <- predict(fit_lda, pc_data_rf)
+preds_lda <- predict(fit_lda, pc_train_rf)
 
 # cross-tabulate estimated and true classes
-errors_lda <- table(class = pc_data_rf$winner, pred = preds_lda$class)
-misclass_lda = 1-sum(diag(errors_lda))/nrow(pc_data)
+errors_lda <- table(class = pc_train_rf$winner, pred = preds_lda$class)
+misclass_lda = 1-sum(diag(errors_lda))/nrow(pc_train)
 misclass_lda
 
 # roc curve for lda
-prediction_lda <- prediction(predictions = preds_lda$posterior[, 2], labels = pc_data_rf$winner)
+prediction_lda <- prediction(predictions = preds_lda$posterior[, 2], labels = pc_train_rf$winner)
 
 # compute error rates as a function of probability threshhold
 perf_lda <- performance(prediction.obj = prediction_lda, 'tpr', 'fpr')
@@ -281,32 +290,31 @@ rates_lda %>%
 optimal_thresh <- slice_max(rates_lda, youden)
 
 # recalibrate qda with different probability threshold
-preds_lda_adj <- factor(preds_qda$posterior[, 2] > optimal_thresh$thresh,
+preds_lda_adj <- factor(preds_lda$posterior[, 2] > optimal_thresh$thresh,
                         labels = c(0, 1))
 
 # cross-tabulate estimated and true classes with adjusted threshold
-errors_lda_adj <- table(class = pc_data_rf$winner, pred = preds_lda_adj)
-misclass_lda_adj = 1-sum(diag(errors_lda_adj))/nrow(pc_data)
+errors_lda_adj <- table(class = pc_train_rf$winner, pred = preds_lda_adj)
+
+misclass_lda_adj = 1-sum(diag(errors_lda_adj))/nrow(pc_train)
 misclass_lda_adj
-
 ```
-
 
 ## Quadratic Discriminant Analysis (QDA):
 ```{r}
 # fit qda model
-fit_qda <- MASS::qda(winner ~ ., method = 'mle', data = pc_data_rf)
+fit_qda <- MASS::qda(winner ~ ., method = 'mle', data = pc_train_rf)
 
 # compute estimated classes
-preds_qda <- predict(fit_qda, pc_data_rf)
+preds_qda <- predict(fit_qda, pc_train_rf)
 
 # cross-tabulate estimated and true classes
-errors_qda <- table(class = pc_data_rf$winner, pred = preds_qda$class)
-misclass_qda = 1-sum(diag(errors_qda))/nrow(pc_data)
+errors_qda <- table(class = pc_train_rf$winner, pred = preds_qda$class)
+misclass_qda = 1-sum(diag(errors_qda))/nrow(pc_train)
 misclass_qda
 
 # roc curve for qda
-prediction_qda <- prediction(predictions = preds_qda$posterior[, 2], labels = pc_data_rf$winner)
+prediction_qda <- prediction(predictions = preds_qda$posterior[, 2], labels = pc_train_rf$winner)
 
 # compute error rates as a function of probability threshhold
 perf_qda <- performance(prediction.obj = prediction_qda, 'tpr', 'fpr')
@@ -337,11 +345,11 @@ preds_qda_adj <- factor(preds_qda$posterior[, 2] > optimal_thresh$thresh,
                         labels = c(1, 0))
 
 # cross-tabulate estimated and true classes with adjusted threshold
-errors_qda_adj <- table(class = pc_data_rf$winner, pred = preds_qda_adj)
-misclass_qda_adj = 1-sum(diag(errors_qda_adj))/nrow(pc_data)
+errors_qda_adj <- table(class = pc_train_rf$winner, pred = preds_qda_adj)
+misclass_qda_adj = 1-sum(diag(errors_qda_adj))/nrow(pc_train)
 misclass_qda_adj
-
 ```
+
 # Misclassification Rates Table
 ```{r}
 misclass.rates <- data.frame("Regression Model" = c("Logistic Regression", "K Nearest Neighbors", "Random Tree","Random Forest", "Linear Discriminant Analysis", "Quadratic Discriminant Analysis"), "Misclassification Rate" = c(tot_misclass_glm, tot_misclass_knn, misclass_rf, misclass_tree,misclass_lda_adj, misclass_qda_adj))
