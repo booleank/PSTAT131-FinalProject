@@ -65,9 +65,8 @@ This section should serve to orient the reader to the topic (analysis of the 201
 
 For a general introduction, you might find it useful to adapt what your group wrote in the background questions on the interim report. This is probably most appropriate if your focus is on prediction; if not, you may wish to compose this anew.
 
-For an introduction to your project tasks, a few short sentences is usually sufficient. For example:
-
-> "For this project, we first sought to predict the winning candidate in each county and identify demographic variables that were predictive of the election outcome. Using a logistic regression model, we achieved XX% predictive accuracy and found that X, Y, Z were significantly associated with the outcome. Then, we sought to understand the geographic heterogeneity of these predictive variables across U.S. counties. We used $K$-means clustering and identified three regional clusters and two geographically distributed clusters."
+------
+For this project, we first sought to predict the winning candidate in each county. In order to build a more predictive model, we used principal component analysis. We then used the first 8 principal components on the merged data and applied this to logistic regression, K- Nearest Neighbors, LDA, QDA, and regression trees. For these models, we used vote count as our  response variable and the first principal components as our explanatory variables. Our main objective was to use method comparison to find the most accurate model in predicting the winner. 
 
 # Materials and methods
 
@@ -77,7 +76,11 @@ This section should describe your data and the methods you used. Both descriptio
 
 Describe the raw data sources -- census and election data. Then provide a description of the preprocessing that you did in stage 1; this does not need to cover every step, but again, should enable the reader to imagine the process. They should grasp that you took aggregated tract-level census data to the county level and merged this with election data. The aggregation is probably helpful to describe in a little detail, but the conversions of population structure variables to percentages are not necessary to mention.
 
-Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.
+------
+There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution information which we aggregated to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county.
+
+
+[Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.]
 
 ## Methods
 
@@ -87,17 +90,24 @@ While it's not necessary to explain each method from first principles, some expo
 
 > To predict the winning candidate in each county and identify demographic variables that were predictive of the election outcome, logistic regression was used to model the probabilities that either major candidate won a county. Specifically, model inputs were an indicator for whether Trump won (response) and the census information for the corresponding county (covariates):
 
-$$\text{logit}\left[P\left(\text{Trump win}\right)_i\right] = \beta_0 + \beta_1 \text{white}_i + \cdots + \beta_{10} \text{income}_i\;,\quad \text{county } i = 1, \dots, 2148$$
-
 > Parameters were estimated by maximum likelihood on 80% of the data and predictive accuracy was assessed on the remaining 20%.
+
+--------
+
+We began by constructing Principal Component Analysis to use as inputs into our supervised methods. This required scaling and centering of the merged data. we then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. We found that the first 8 PC's captured 77.8% of the total variation which was sufficient to implement onto our regression models. 
 
 
 # Results
 
 This section should present and describe your results as succinctly as possible. Usually, this is done by showing and explaining figures and tables; I'd strongly recommend deciding first what figures and tables you wish to show, and then writing the section around those. You don't need to show *everything* you did (though that temptation is certainly strong at times), but just the key pieces needed to communicate the outcome. A helpful organizational principle would be to structure this section into two subsections, one for each task.
+-------
+
 
 # Discussion
 
 This final section should briefly reflect on your results, offering any interpretations or commentary. You can also include any other thoughts you wish to share with the reader (unexpected difficulties, promising follow-ups, caveats in certain results, etc.). 
 
 Begin by reiterating in a few sentences what was done; then offer your commentary and other discussion.
+
+-------
+By using principal component analysis in our regression models, we were able to build more predictive models. However, this reduced the interpretability of our results. We were unable to identify the demographic variables that were predictive of the election outcome. 
