@@ -1,6 +1,6 @@
 ---
-title: "Predicting winner of US general election 2016 at County level using selected demographic-socio-economic-political variables."
-author: "Aritra Ghosal, Harleen Kaur, Evan Mouchard, Elizabeth Forney"
+title: "Predicting winner of US general election 2016 at County level using selected demographic-socio-economic-political variables"
+author: "Your names here"
 output: pdf_document
 ---
 
@@ -17,7 +17,6 @@ knitr::opts_chunk$set(echo = F,
 library(pander)
 library(tidyverse)
 ```
-
 
 ### General report guidelines
 
@@ -67,21 +66,18 @@ This section should serve to orient the reader to the topic (analysis of the 201
 For a general introduction, you might find it useful to adapt what your group wrote in the background questions on the interim report. This is probably most appropriate if your focus is on prediction; if not, you may wish to compose this anew.
 
 ---
+The results of US general election 2012 was predicted with considerable high accuracy, especially by Nate Silver's approach. The success of the polling and analysis methods can be attibuted primarily to the fact that the voters who were sampled for survery were honest with their opinion and that whatever change occurred over time was tractable with high accuracy. As we have seen that the voting preferences may change with a change in employment or a shift in federal 
+income tax schemes or an impactful campaign ad. Other sources of variation are sampling error and "house effect". The former implies overrepresentation of 
+voters of one candidate in the sample, and the corrections to such errors by pollsters may be biased due to "house effect". Both these error can be estimated 
+to great degree and adjusted for but the accuracy of polling survey remains the most important and sensitive part of this process.
 
-The results of US general election 2012 was predicted with high accuracy.  
+However, for the General election of 2016, polls and forecasts were generally wrong about the election due to systematic polling challenges. Clinton's 
+projected voteshare was overestimated in most cases, particularly within swing states. Experts have speculated that Trump supporters were reluctant to 
+participate and/or answer honestly to polling questions. This is probably due to the controversies surrounding Donald Trump. On the other hand Hillary was 
+a seasoned politician with well defined agendas and ideas for presidency. 
 
-For this project, our goal was to predict the winning candidate in each county for the US general election 2016 from the numeric covariates in the 'census' dataset. Our analysis was performed retrospectively and the winner was known, hence although there were many candidates competing, we designed our response 
-as a binary variable where a 'Win' or 'Loss' indicates respectively win or loss for Donald Trump. This specific construction of the response was done to 
-facilitate the use of classification models we discussed under supervised learning methods such as: 
-
-1) Logistic regression 
-2) K- Nearest Neighbors 
-3) Linear Discriminant Analysis
-4) Quadratic Discriminant Analysis. 
-5) Regression Trees.
-6) Random Forest. 
-
-For this project, we first sought to predict the winning candidate in each county. In order to build a more predictive model, we used principal component analysis. We then used the first 8 principal components on the merged data and applied this to . For these models, we used vote count as our  response variable and the first principal components as our explanatory variables. Our main objective was to use method comparison to find the most accurate model in predicting the winner.
+To analyze the outcome of the election results further, our goal was to predict the winning candidate in each county for the US general election 2016 using 
+some specific statistical models using demographic-socio-economic variables as predictors. 
 
 # Materials and methods
 
@@ -121,9 +117,7 @@ While it's not necessary to explain each method from first principles, some expo
 ### The Principal Components
 We began by constructing Principal Component Analysis to use as inputs into our supervised methods in determined the winner of each county. This required scaling and centering of the merged data. We then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. $$\text{cumulative variance explained}(q) = \frac{\sum_{j = 1}^q\lambda_j}{\sum_{j = 1}^p \lambda_j}$$  We found that the first 8 PC's captured 77.8% of the total variation which was sufficient cumulative variance explained threshold to implement onto our regression models.
 
-> **Figure 1**: Scree plot of cumulative and proportion of variance explained for each principal component.
-
-```{r echo = F, out.width = '80%'}
+```{r echo = F, out.width = '90%'}
 knitr::include_graphics('screevar.png')
 ```
 
@@ -150,14 +144,6 @@ missclass <- read.csv('missclass_rates.csv')
 missclass %>% pander()
 ```
 
-Additionally, we analyzed the loading plots for thee first ten principal components to identify the most important covariates.
-
-> **Figure 2**: Loadings plot for the first 10 principal components.
-
-```{r echo = F, out.width = '100%'}
-knitr::include_graphics('pc_loadings.png')
-```
-The variables with the largest magnitudes suggest that they are most influential. Thus, variables pertaining to transportation, such as `Carpool`, `OtherTransp`, `MeanCommute`, and `Transit`, seem to be the most important. `Women` and `CountyPop` also appear to be important covariates due to their large loading values in principal components 6 and 9, respectively.
 
 # Discussion
 
