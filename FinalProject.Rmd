@@ -72,11 +72,10 @@ loadings[, 1:10] %>%
   ggplot(aes(x = Loading, y = variable)) +
   geom_point(aes(color = PC), size = 0.5) +
   facet_wrap(~ PC) +
-  theme_bw(base_size = 6) +
+  theme_bw(base_size = 12) +
   geom_vline(xintercept = 0, color = 'blue') +
   geom_path(aes(group = PC, color = PC)) +
   labs(y = '')
-
 ```
 
 
@@ -140,6 +139,44 @@ error_glm
 # total misclassification rate
 tot_misclass_glm <- 1 - sum(diag(error_glm))/nrow(pc_test)
 tot_misclass_glm
+
+# roc curve for glm
+prediction_glm <- prediction(predictions = p_hat_glm, labels = pc_test$winner)
+
+# compute error rates as a function of probability threshhold
+perf_glm <- performance(prediction.obj = prediction_glm, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_glm <- tibble(fpr = slot(perf_glm, 'x.values'),
+                  tpr = slot(perf_glm, 'y.values'),
+                  thresh = slot(perf_glm, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'glm',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_glm %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_glm, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_glm, youden)
+
+# recalibrate qda with different probability threshold
+preds_glm_adj <- factor(p_hat_glm > optimal_thresh$thresh,
+                        labels = c(0, 1))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_glm_adj <- table(class = pc_test$winner, pred = preds_glm_adj)
+errors_glm_adj
+
+misclass_glm_adj = 1-sum(diag(errors_glm_adj))/nrow(pc_test)
+misclass_glm_adj
 ```
 
 ## K Nearest Neighbors
@@ -169,10 +206,10 @@ cv_errors %>%
 best_k <- cv_errors$k[which.min(cv_errors$error)]
 
 # re-train with best k
-y_hat_knn <- knn(train = pc_train[-1], test = pc_test[-1], cl = y, k = best_k)
+pred_knn <- knn(train = pc_train[-1], test = pc_test[-1], cl = y, k = best_k)
 
 # misclassifications
-error_knn <- table(pc_test$winner, y_hat_knn)
+error_knn <- table(pc_test$winner, pred_knn)
 error_knn
 
 # total misclassification rate
