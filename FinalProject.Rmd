@@ -323,7 +323,6 @@ pc_test_rf <- pc_test %>%
       mutate(winner = ifelse(winner == "Hill",1,0))
 
 
-
 fit_gbm <- gbm(winner ~ ., data = pc_train_rf, distribution ='adaboost', interaction.depth =3, n.trees =100, cv.folds = 5)
 
 # select boosting iterations
@@ -398,7 +397,6 @@ y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
 rf_adj_errors <- table(class = y, pred = y_hat)
 misclass_rf_adj = 1-sum(diag(rf_errors))/nrow(pc_test)
 
-optimal_thresh$thresh
 
 rf_errors
 misclass_rf
@@ -408,6 +406,82 @@ misclass_rf_adj
 ```
 #Random forest shows lowest total misclass.
 
+### Rather than simply minimize total misclassification, we want our model to provide a balanced set of predictions overall. Our first set of candidate models have the tendency to over-predict Donald Trump victories. We tried using Youden's threshold to shift our predictions in the direction of Clinton, but this resulted in over-prediction of Clinton victories. Our revised target is to achieve equal false negatives and false positives; We want our set of prediction errors to be split evenly between both candidates, while maintaining low total misclassification. With this target in mind, we will attempt to optimize our Random Forest prediction threshold. We picked Random Forest because it has the lowest total misclassification error for both the regular and Youden-optimized thresholds. 
+
+```{r}
+#install.packages('hmeasure')
+library(hmeasure)
+#goal: fp = fn; fp-fn = 0
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+
+
+difs = vector('list', 100)
+for(i in seq_along(x)){
+  e = misclassCounts(probs_rf > i*0.01, pc_train_rf$winner)
+  dif <- abs(e$conf.matrix[1,2] - e$conf.matrix[2,1])
+  difs[[i]] <- dif
+}
+
+opt_search <- data.frame('thresh' = 0.01*1:100, 'FP_FN_Difference'= unlist(difs))
+min_index = which.min(unlist(difs))
+min = min(unlist(difs))
+optimum <- data.frame(min_index, min)
+
+opt_search %>% 
+  ggplot(aes(x = thresh, y = FP_FN_Difference)) + 
+  geom_path() +
+  theme_bw() +
+  geom_point(data = optimum, aes(x = 0.01*min_index, min),
+             shape = 16, size = 3, color = 'red') +
+  ggtitle("|FP - FN| against Prediction Threshold")
+
+balanced_thresh <- 0.01*min_index
+balanced_thresh
+```
+
+##We found the most balanced threshold to be 0.38. 
+
+```{r}
+preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+
+y_hat <- factor(probs_rf > balanced_thresh, labels = c('Don','Hill'))
+y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
+
+#compute adjusted test misclassification errors
+rf_balanced_errors <- table(class = y, pred = y_hat)
+misclass_rf_balanced = 1-sum(diag(rf_balanced_errors))/nrow(pc_test)
+rf_balanced_errors
+misclass_rf_balanced
+```
+
+```{r}
+#calculate minimum training misclassification error across all thresholds
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+ME = vector('list', 100)
+for(i in seq_along(x)){
+  me = misclassCounts(probs_rf > i * 0.01, pc_train_rf$winner)$metrics$ER #calculates total misclassification error
+  ME[[i]] = me
+}
+min_thresh = 0.01*which.min(unlist(ME)) # threshold corresponding to smallest error
+
+training_rf_min_errors <- table(class = factor(pc_train_rf$winner, labels = c('Don', 'Hill')), 
+                                pred = factor(probs_rf>min_thresh, labels = c('Don','Hill')))
+training_rf_min_misclass = 1 - sum(diag(training_rf_min_errors))/nrow(pc_train)
+
+
+#calculate test misclassifications based on training threshold for smallest error
+preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+rf_min_errors <- table( class = factor(pc_test_rf$winner, labels = c('Don', 'Hill')), 
+                                pred = factor(probs_rf>min_thresh, labels = c('Don','Hill')))
+rf_min_errors
+
+rf_min_misclass <- 1 - sum(diag(rf_min_errors))/nrow(pc_train)
+rf_min_misclass
+```
 ## Linear Discriminant Analysis (LDA):
 ```{r}
 # fit lda model
@@ -494,7 +568,9 @@ rates_qda %>%
   guides(color = guide_bins()) +
   theme_bw() +
   geom_point(data = slice_max(rates_qda, youden),
-             shape = 16, color = 'red')
+             shape = 16, color = 'red') +
+  xlab('FPR (False "Hillary" Rate)') +
+  ylab('TPR (True "Hillary" Rate)')
 
 # store optimal threshold
 optimal_thresh <- slice_max(rates_qda, youden)
