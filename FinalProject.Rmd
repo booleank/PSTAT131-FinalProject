@@ -221,13 +221,15 @@ So far KNN performed better than logistic regression, based on the total misclas
 
 ## Regression Tree
 ```{r}
+set.seed(20121)
+
 #initial tree
 nmin <- 5
 tree_opts <- tree.control(nobs = nrow(pc_train), 
                           minsize = nmin, 
-                          mindev = 0)
+                          mindev = 0.05)
 t_0 <- tree(winner ~ ., data = pc_train,
-                control = tree_opts, split = 'deviance') 
+                control = tree_opts, split = 'gini') 
 
 nfolds <- 25
 cv_out <- cv.tree(t_0, K = nfolds)
@@ -243,16 +245,74 @@ t_opt <- prune.tree(t_0, k = best_alpha$alpha)
 # plot
 draw.tree(t_opt, cex = 0.8, size = 2, digits = 1)
 
+# class probabilities on training partition
+probs_tree <- predict(t_opt, pc_train)
+
+# predicted training results
+preds_tree <- factor(probs_tree[, 2] > 0.5, labels = c('Don', 'Hill'))
+
+# training misclassification error rates
+training_error_tree <- table(class = pc_train$winner, pred = preds_tree)
+training_misclass_tree = 1-sum(diag(training_error_tree))/nrow(pc_train)
+
+# roc curve for classification tree
+prediction_tree <- prediction(predictions = probs_tree[,2], labels = pc_train$winner)
+
+# compute error rates as a function of probability threshhold
+perf_tree <- performance(prediction.obj = prediction_tree, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_tree <- tibble(fpr = slot(perf_tree, 'x.values'),
+                  tpr = slot(perf_tree, 'y.values'),
+                  thresh = slot(perf_tree, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'lda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_tree %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_tree, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_tree, youden)
+
+# recalibrate qda with different probability threshold
+preds_tree_adj <- factor(probs_tree[,2] > optimal_thresh$thresh,
+                        labels = c('Don', 'Hill'))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+training_error_tree_adj <- table(class = pc_train$winner, pred = preds_tree_adj)
+training_misclass_tree_adj = 1-sum(diag(training_error_tree_adj))/nrow(pc_train)
+
 # class probabilities on test partition
-probs <- predict(t_opt, pc_test)
+probs_tree <- predict(t_opt, pc_test)
 
-# predicted class labels
-preds <- factor(probs[, 2] > 0.5, labels = c('Don', 'Hill'))
+# predict test results
+preds_tree <- factor(probs_tree[,2] >0.5, 
+                     label = c('Don', 'Hill'))
 
-# misclassification error rates
-error_tree <- table(pred = preds, class = pc_test$winner)
+# compute misclassifications
+error_tree <- table(class = pc_test$winner, pred = preds_tree)
 misclass_tree = 1-sum(diag(error_tree))/nrow(pc_test)
+
+#predict test results with youden threshold
+preds_tree <- factor(probs_tree[,2] > optimal_thresh$thresh, label = c("Don", "Hill"))
+
+#compute adjusted misclassifications
+error_tree_adj <-table(class = pc_test$winner, pred = preds_tree)
+misclass_tree_adj = 1-sum(diag(error_tree_adj))/nrow(pc_test)
+
+error_tree
 misclass_tree
+
+error_tree_adj
+misclass_tree_adj
 ```
 
 ## Random Forest 
@@ -269,20 +329,82 @@ fit_gbm <- gbm(winner ~ ., data = pc_train_rf, distribution ='adaboost', interac
 # select boosting iterations
 best_m <- gbm.perf(fit_gbm, method ='cv')
 
-# compute predictions on test set
-preds <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
-probs <-1/(1+ exp(-preds))
-y_hat <- factor(probs >0.5, labels = c('Don','Hill'))
+# compute predictions on training set
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+y_hat <- factor(probs_rf >0.5, labels = c('Don','Hill'))
+y <- factor(pc_train_rf$winner, labels = c('Don','Hill'))
+
+# compute training misclassification errors
+rf_errors <- table(class = y, pred = y_hat)
+training_misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_train)
+training_misclass_rf
+
+# roc curve for random forest
+prediction_rf <- prediction(predictions = probs_rf, labels = pc_train_rf$winner)
+
+# compute error rates as a function of probability threshhold
+perf_rf <- performance(prediction.obj = prediction_rf, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_rf <- tibble(fpr = slot(perf_rf, 'x.values'),
+                  tpr = slot(perf_rf, 'y.values'),
+                  thresh = slot(perf_rf, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'lda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_rf %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_rf, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_rf, youden)
+
+# recalibrate qda with different probability threshold
+preds_rf_adj <- factor(probs_rf > optimal_thresh$thresh,
+                        labels = c(0, 1))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_rf_adj <- table(class = pc_train_rf$winner, pred = preds_rf_adj)
+
+training_misclass_rf_adj = 1-sum(diag(errors_rf_adj))/nrow(pc_train)
+training_misclass_rf_adj
+
+# compute test predictions
+preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+y_hat <- factor(probs_rf >0.5, labels = c('Don','Hill'))
 y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
 
-
-
-# compute misclassification errors
+# compute test misclassification errors
 rf_errors <- table(class = y, pred = y_hat)
+
 misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_test)
-misclass_rf
+
+# compute test predictions with optimal threshold
+preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+y_hat <- factor(probs_rf >optimal_thresh$thresh, labels = c('Don','Hill'))
+y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
+
+#compute adjusted test misclassification errors
+rf_adj_errors <- table(class = y, pred = y_hat)
+misclass_rf_adj = 1-sum(diag(rf_errors))/nrow(pc_test)
+
+optimal_thresh$thresh
 
 rf_errors
+misclass_rf
+
+rf_adj_errors
+misclass_rf_adj
 ```
 #Random forest shows lowest total misclass.
 
