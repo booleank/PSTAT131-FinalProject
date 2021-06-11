@@ -1,5 +1,5 @@
 ---
-title: "Your title here"
+title: "Predicting winner of US general election 2016 at County level using selected demographic-socio-economic-political variables."
 author: "Your names here"
 output: pdf_document
 ---
@@ -17,7 +17,6 @@ knitr::opts_chunk$set(echo = F,
 library(pander)
 library(tidyverse)
 ```
-
 
 ### General report guidelines
 
