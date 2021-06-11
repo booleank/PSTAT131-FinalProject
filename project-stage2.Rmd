@@ -1,5 +1,5 @@
 ---
-title: "Predicting winner of US general election 2016 at County level using selected demographic-socio-economic-political variables."
+title: "Predicting winner of US general election 2016 at County level using selected demographic-socio-economic-political variables"
 author: "Your names here"
 output: pdf_document
 ---
@@ -66,8 +66,18 @@ This section should serve to orient the reader to the topic (analysis of the 201
 For a general introduction, you might find it useful to adapt what your group wrote in the background questions on the interim report. This is probably most appropriate if your focus is on prediction; if not, you may wish to compose this anew.
 
 ---
+The results of US general election 2012 was predicted with high accuracy.  
 
-For this project, we first sought to predict the winning candidate in each county. In order to build a more predictive model, we used principal component analysis. We then used the first 8 principal components on the merged data and applied this to logistic regression, K- Nearest Neighbors, LDA, QDA, and regression trees. For these models, we used vote count as our  response variable and the first principal components as our explanatory variables. Our main objective was to use method comparison to find the most accurate model in predicting the winner. 
+For this project, our goal was to predict the winning candidate in each county for the US general election 2016 from the numeric covariates in the 'census' dataset. Our analysis was performed retrospectively and the winner was known, hence although there were many candidates competing, we designed our response as a binary variable where a 'Win' or 'Loss' indicates respectively win or loss for Donald Trump. This specific construction of the response was done to facilitate the use of classification models we discussed under supervised learning methods such as: 
+
+1) Logistic regression 
+2) K- Nearest Neighbors 
+3) Linear Discriminant Analysis
+4) Quadratic Discriminant Analysis. 
+5) Regression Trees.
+6) Random Forest. 
+
+For this project, we first sought to predict the winning candidate in each county. In order to build a more predictive model, we used principal component analysis. We then used the first 8 principal components on the merged data and applied this to . For these models, we used vote count as our  response variable and the first principal components as our explanatory variables. Our main objective was to use method comparison to find the most accurate model in predicting the winner. 
 
 # Materials and methods
 
