@@ -68,7 +68,9 @@ For a general introduction, you might find it useful to adapt what your group wr
 ---
 The results of US general election 2012 was predicted with high accuracy.  
 
-For this project, our goal was to predict the winning candidate in each county for the US general election 2016 from the numeric covariates in the 'census' dataset. Our analysis was performed retrospectively and the winner was known, hence although there were many candidates competing, we designed our response as a binary variable where a 'Win' or 'Loss' indicates respectively win or loss for Donald Trump. This specific construction of the response was done to facilitate the use of classification models we discussed under supervised learning methods such as: 
+For this project, our goal was to predict the winning candidate in each county for the US general election 2016 from the numeric covariates in the 'census' dataset. Our analysis was performed retrospectively and the winner was known, hence although there were many candidates competing, we designed our response 
+as a binary variable where a 'Win' or 'Loss' indicates respectively win or loss for Donald Trump. This specific construction of the response was done to 
+facilitate the use of classification models we discussed under supervised learning methods such as: 
 
 1) Logistic regression 
 2) K- Nearest Neighbors 
