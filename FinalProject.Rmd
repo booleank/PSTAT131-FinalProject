@@ -342,4 +342,8 @@ misclass_qda_adj = 1-sum(diag(errors_qda_adj))/nrow(pc_data)
 misclass_qda_adj
 
 ```
-
+# Misclassification Rates Table
+```{r}
+misclass.rates <- data.frame("Regression Model" = c("Logistic Regression", "K Nearest Neighbors", "Random Tree","Random Forest", "Linear Discriminant Analysis", "Quadratic Discriminant Analysis"), "Misclassification Rate" = c(tot_misclass_glm, tot_misclass_knn, misclass_rf, misclass_tree,misclass_lda_adj, misclass_qda_adj))
+misclass.rates
+```
