@@ -107,6 +107,10 @@ While it's not necessary to explain each method from first principles, some expo
 ### The Principal Components
 We began by constructing Principal Component Analysis to use as inputs into our supervised methods in determined the winner of each county. This required scaling and centering of the merged data. We then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. $$\text{cumulative variance explained}(q) = \frac{\sum_{j = 1}^q\lambda_j}{\sum_{j = 1}^p \lambda_j}$$  We found that the first 8 PC's captured 77.8% of the total variation which was sufficient cumulative variance explained threshold to implement onto our regression models.
 
+```{r echo = F, out.width = '90%'}
+knitr::include_graphics('screevar.png')
+```
+
 ### Logistic Regression
 The first model we fit was a logistic regression model to predict the the winning candidate in each county during the 2016 presidential election. We trained the model on our principal component training partition (70% of the data), regressing the winning candidate on the first 8 principal components. Moreover, The optimal threshold was computed using Youden's statistic. The accuracy was then assessed on the remaining 30% of the data and the total misclassification rate was calculated in order to compare this model to other models.
 
