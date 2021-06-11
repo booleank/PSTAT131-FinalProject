@@ -1,7 +1,7 @@
 ---
 title: "Your title here"
 author: "Your names here"
-output: html_document
+output: pdf_document
 ---
 
 
@@ -14,7 +14,8 @@ knitr::opts_chunk$set(echo = F,
                       fig.width = 4)
 
 # libraries here
-
+library(pander)
+library(tidyverse)
 ```
 
 
@@ -65,7 +66,8 @@ This section should serve to orient the reader to the topic (analysis of the 201
 
 For a general introduction, you might find it useful to adapt what your group wrote in the background questions on the interim report. This is probably most appropriate if your focus is on prediction; if not, you may wish to compose this anew.
 
-------
+---
+
 For this project, we first sought to predict the winning candidate in each county. In order to build a more predictive model, we used principal component analysis. We then used the first 8 principal components on the merged data and applied this to logistic regression, K- Nearest Neighbors, LDA, QDA, and regression trees. For these models, we used vote count as our  response variable and the first principal components as our explanatory variables. Our main objective was to use method comparison to find the most accurate model in predicting the winner. 
 
 # Materials and methods
@@ -76,8 +78,17 @@ This section should describe your data and the methods you used. Both descriptio
 
 Describe the raw data sources -- census and election data. Then provide a description of the preprocessing that you did in stage 1; this does not need to cover every step, but again, should enable the reader to imagine the process. They should grasp that you took aggregated tract-level census data to the county level and merged this with election data. The aggregation is probably helpful to describe in a little detail, but the conversions of population structure variables to percentages are not necessary to mention.
 
-------
-There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution, demographic information. This data consisted of racial, employment, income, transportation, and location variables.  We aggregated the raw census data to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county.
+---
+
+There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution, demographic information. This data consisted of racial, employment, income, transportation, and location variables.  We aggregated the raw census data to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county. Table 1 shows a few rows and columns of the dataset.
+
+> **Table 1**: Example rows and columns of the dataset.
+
+```{r echo = F}
+load('~/Documents/Spring2021/PSTAT131/final-project/merged_data2.RData')
+head(merged_data2[0:7]) %>% pander()
+```
+
 
 
 [Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.]
@@ -92,16 +103,33 @@ While it's not necessary to explain each method from first principles, some expo
 
 > Parameters were estimated by maximum likelihood on 80% of the data and predictive accuracy was assessed on the remaining 20%.
 
---------
-The Principal Components
-We began by constructing Principal Component Analysis to use as inputs into our supervised methods in determined the winner of each county. This required scaling and centering of the merged data. We then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. $$\text{cumulative variance explained}(q) = \frac{\sum_{j = 1}^q\lambda_j}{\sum_{j = 1}^p \lambda_j}$$  We found that the first 8 PC's captured 77.8% of the total variation which was sufficient cumulative variance explained threshold to implement onto our regression models. 
+---
+
+### The Principal Components
+We began by constructing Principal Component Analysis to use as inputs into our supervised methods in determined the winner of each county. This required scaling and centering of the merged data. We then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. $$\text{cumulative variance explained}(q) = \frac{\sum_{j = 1}^q\lambda_j}{\sum_{j = 1}^p \lambda_j}$$  We found that the first 8 PC's captured 77.8% of the total variation which was sufficient cumulative variance explained threshold to implement onto our regression models.
+
+### Logistic Regression
+The first model we fit was a logistic regression model to predict the the winning candidate in each county during the 2016 presidential election. We trained the model on our principal component training partition (70% of the data), regressing the winning candidate on the first 8 principal components. The accuracy was then assessed on the remaining 30% of the data and the total misclassification rate was calculated in order to compare this model to other models.
+
+### $k$-Nearest Neighbors
+The next model we wanted to compare was a $k$-nearest neighbors model. The class labels we used were the winning candidates (either Donald Trump or Hillary Clinton) and leave one out cross validation was performed in order to select the best $k$ that would minimize the error for our model. Like with the logistic regression model, we trained the $k$-nearest neighbors model on a 70% partition of the first 8 principal components data and measured the predictive accuracy based on the remaining 30% by computing the total misclassification error rate.
 
 
 
 # Results
 
 This section should present and describe your results as succinctly as possible. Usually, this is done by showing and explaining figures and tables; I'd strongly recommend deciding first what figures and tables you wish to show, and then writing the section around those. You don't need to show *everything* you did (though that temptation is certainly strong at times), but just the key pieces needed to communicate the outcome. A helpful organizational principle would be to structure this section into two subsections, one for each task.
--------
+
+---
+
+The main metric we used to compare our models was the total misclassification rate. Table 2 shows the total misclassification rate for each model.
+
+> **Table 2**: Total misclassification rate for each model we fit.
+
+```{r echo = F}
+missclass <- read.csv('missclass_rates.csv')
+missclass %>% pander()
+```
 
 
 # Discussion
@@ -110,5 +138,6 @@ This final section should briefly reflect on your results, offering any interpre
 
 Begin by reiterating in a few sentences what was done; then offer your commentary and other discussion.
 
--------
+---
+
 By using principal component analysis in our regression models, we were able to build more predictive models. However, this reduced the interpretability of our results. We were unable to identify the demographic variables that were predictive of the election outcome. 

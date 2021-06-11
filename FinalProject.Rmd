@@ -352,6 +352,9 @@ misclass_qda_adj
 
 # Misclassification Rates Table
 ```{r}
-misclass.rates <- data.frame("Regression Model" = c("Logistic Regression", "K Nearest Neighbors", "Random Tree","Random Forest", "Linear Discriminant Analysis", "Quadratic Discriminant Analysis"), "Misclassification Rate" = c(tot_misclass_glm, tot_misclass_knn, misclass_rf, misclass_tree,misclass_lda_adj, misclass_qda_adj))
+misclass.rates <- data.frame("Regression Model" = c("K Nearest Neighbors", "Random Forest", "Logistic Regression", "Random Tree", "Quadratic Discriminant Analysis", "Linear Discriminant Analysis"), "Misclassification Rate" = c(tot_misclass_knn, misclass_rf, tot_misclass_glm, misclass_tree, misclass_qda_adj, misclass_lda_adj))
+
+#write.csv(misclass.rates, 'missclass_rates.csv', row.names = FALSE)
+
 misclass.rates %>% pander()
 ```
