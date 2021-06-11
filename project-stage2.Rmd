@@ -77,7 +77,7 @@ This section should describe your data and the methods you used. Both descriptio
 Describe the raw data sources -- census and election data. Then provide a description of the preprocessing that you did in stage 1; this does not need to cover every step, but again, should enable the reader to imagine the process. They should grasp that you took aggregated tract-level census data to the county level and merged this with election data. The aggregation is probably helpful to describe in a little detail, but the conversions of population structure variables to percentages are not necessary to mention.
 
 ------
-There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution information which we aggregated to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county.
+There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution, demographic information. This data consisted of racial, employment, income, transportation, and location variables.  We aggregated the raw census data to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county.
 
 
 [Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.]
@@ -93,8 +93,9 @@ While it's not necessary to explain each method from first principles, some expo
 > Parameters were estimated by maximum likelihood on 80% of the data and predictive accuracy was assessed on the remaining 20%.
 
 --------
+The Principal Components
+We began by constructing Principal Component Analysis to use as inputs into our supervised methods in determined the winner of each county. This required scaling and centering of the merged data. We then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. $$\text{cumulative variance explained}(q) = \frac{\sum_{j = 1}^q\lambda_j}{\sum_{j = 1}^p \lambda_j}$$  We found that the first 8 PC's captured 77.8% of the total variation which was sufficient cumulative variance explained threshold to implement onto our regression models. 
 
-We began by constructing Principal Component Analysis to use as inputs into our supervised methods. This required scaling and centering of the merged data. we then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. We found that the first 8 PC's captured 77.8% of the total variation which was sufficient to implement onto our regression models. 
 
 
 # Results
