@@ -172,8 +172,9 @@ A classification tree was trained, at first, by overfitting a very large tree to
 A random forest -- which is an ensemble decision-tree-based method -- was constructed according to the "Adaptive Boosting" scheme. We used 100 trees with 3 interaction terms and 5-fold cross validation. This method produced the best candidates for our final model. The Youden-optimized threshold was tested, as well as two more thresholds that minimized total misclassification and balanced false positives with false negatives to arrive at our preferred model. 
 
 ### Linear and Quadratic discriminant Analysis
-For categorical response, and and covariates being Principal components are in euclidean space of p-dimension, we follow similar steps as earlier models and train the model on 70%
-data and test the performance on the rest. The total misclassification error rates turning out to be 0.0837 for the LDA and 0.08913043 for the QDA. Hence LDA performs slightly better. But their performances are not at par with the random forest above. 
+For categorical response, and and covariates being Principal components are in euclidean space of p-dimension, we follow similar steps as earlier models and 
+train both the LDA and QDA models on 70% data and test the predictive performance on the rest. The total misclassification error rates turning out to be 
+0.0837 for the LDA and 0.08913043 for the QDA. Hence LDA performs slightly better. But their performances are not at par with the random forest model discussed above. 
 
 # Results
 
