@@ -1,5 +1,5 @@
 ---
-title: "Predicting winner of US general election 2016 at County level using selected demographic-socio-economic-political variables"
+title: "Predicting winner of US general election 2016 at County level using selected demographic-socio-economic variables"
 author: "Your names here"
 output: pdf_document
 ---
@@ -61,11 +61,6 @@ accurately and clearly.
 
 # Introduction
 
-This section should serve to orient the reader to the topic (analysis of the 2016 election) and then indicate the content of the report (specific tasks that you took up for the project). Provide one short paragraph introducing the topic, and another introducing your project tasks.
-
-For a general introduction, you might find it useful to adapt what your group wrote in the background questions on the interim report. This is probably most appropriate if your focus is on prediction; if not, you may wish to compose this anew.
-
----
 The results of US general election 2012 was predicted with considerable high accuracy, especially by Nate Silver's approach. The success of the polling and analysis methods can be attibuted primarily to the fact that the voters who were sampled for survery were honest with their opinion and that whatever change occurred over time was tractable with high accuracy. As we have seen that the voting preferences may change with a change in employment or a shift in federal 
 income tax schemes or an impactful campaign ad. Other sources of variation are sampling error and "house effect". The former implies overrepresentation of 
 voters of one candidate in the sample, and the corrections to such errors by pollsters may be biased due to "house effect". Both these error can be estimated 
@@ -77,11 +72,24 @@ participate and/or answer honestly to polling questions. This is probably due to
 a seasoned politician with well defined agendas and ideas for presidency. 
 
 To analyze the outcome of the election results further, our goal was to predict the winning candidate in each county for the US general election 2016 using 
-some specific statistical models using demographic-socio-economic variables as predictors. 
+some specific statistical models using demographic-socio-economic variables as predictors. We also wanted to perform a comparative study of the competing 
+models. The models we used for our analysis are described below. 
 
 # Materials and methods
 
-This section should describe your data and the methods you used. Both descriptions should be succinct -- just detailed enough to help the reader imagine what you did. This is always a bit of a balancing act.
+Some initial analysis showed that every county in US were won either by Donald Trump or Hillary Clinton. Since we perform our analysis retrospectively with the final winner of the election known, we construct the response as a binary variable with two outcomes 'Don' and 'Hill' respectively meaning that Donald Trump or Hillary Clinton won that particular county. This particular construction of our response variable was done to facilitate the use of claffification models under 
+Supervised learning methods we discussed in our PSTAT 131 course. These models are:
+
+1) Logistic Regression
+2) K- nearest neighbors
+3) Linear Discriminant Analysis
+4) Quadratic Discriminant Analysis
+5) Regression Tree
+6) Random Forest
+
+In each model above we predict the probability of win for Donald Trump. Then we consider a threshold in the range $(0,1)$. If the predicted probability >
+threshold, then we predict that that Trump w
+
 
 ## Datasets
 
