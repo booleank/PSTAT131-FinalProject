@@ -227,9 +227,9 @@ set.seed(20121)
 nmin <- 5
 tree_opts <- tree.control(nobs = nrow(pc_train), 
                           minsize = nmin, 
-                          mindev = 0.05)
+                          mindev = 0)
 t_0 <- tree(winner ~ ., data = pc_train,
-                control = tree_opts, split = 'gini') 
+                control = tree_opts, split = 'deviance') 
 
 nfolds <- 25
 cv_out <- cv.tree(t_0, K = nfolds)
@@ -238,7 +238,7 @@ cv_df <- tibble(alpha = cv_out$k,
                 size = cv_out$size)
 best_alpha <- slice_min(cv_df, impurity) %>%
   slice_min(size)
-
+best_alpha
 # prune initial tree
 t_opt <- prune.tree(t_0, k = best_alpha$alpha)
 
@@ -321,7 +321,6 @@ pc_train_rf <- pc_train %>%
   mutate(winner = ifelse(winner == "Hill",1,0))
 pc_test_rf <- pc_test %>%
       mutate(winner = ifelse(winner == "Hill",1,0))
-
 
 fit_gbm <- gbm(winner ~ ., data = pc_train_rf, distribution ='adaboost', interaction.depth =3, n.trees =100, cv.folds = 5)
 
@@ -406,9 +405,9 @@ misclass_rf_adj
 ```
 #Random forest shows lowest total misclass.
 
-### Rather than simply minimize total misclassification, we want our model to provide a balanced set of predictions overall. Our first set of candidate models have the tendency to over-predict Donald Trump victories. We tried using Youden's threshold to shift our predictions in the direction of Clinton, but this resulted in over-prediction of Clinton victories. Our revised target is to achieve equal false negatives and false positives; We want our set of prediction errors to be split evenly between both candidates, while maintaining low total misclassification. With this target in mind, we will attempt to optimize our Random Forest prediction threshold. We picked Random Forest because it has the lowest total misclassification error for both the regular and Youden-optimized thresholds. 
+### Rather than simply minimize total misclassification, we want our model to provide a balanced set of predictions. Our first set of candidate models have the tendency to over-predict Donald Trump victories. We tried using Youden's threshold to shift our predictions in the direction of Clinton, but this resulted in over-prediction of Clinton victories. Our revised target is to achieve approximately equal false negatives and false positives; We want our set of prediction errors to be split evenly between both candidates, while maintaining low total misclassifications. With this target in mind, we will attempt to optimize our Random Forest prediction threshold. We picked Random Forest because it has the lowest total misclassification error for both the regular and Youden-optimized thresholds. 
 
-```{r}
+```{r, fig.height = 5, fig.width = 8}
 #install.packages('hmeasure')
 library(hmeasure)
 #goal: fp = fn; fp-fn = 0
@@ -423,18 +422,18 @@ for(i in seq_along(x)){
   difs[[i]] <- dif
 }
 
-opt_search <- data.frame('thresh' = 0.01*1:100, 'FP_FN_Difference'= unlist(difs))
+opt_search <- data.frame('thresh' = 0.01*1:100, 'difference'= unlist(difs))
 min_index = which.min(unlist(difs))
 min = min(unlist(difs))
 optimum <- data.frame(min_index, min)
 
 opt_search %>% 
-  ggplot(aes(x = thresh, y = FP_FN_Difference)) + 
+  ggplot(aes(x = thresh, y = difference)) + 
   geom_path() +
   theme_bw() +
   geom_point(data = optimum, aes(x = 0.01*min_index, min),
              shape = 16, size = 3, color = 'red') +
-  ggtitle("|FP - FN| against Prediction Threshold")
+  ggtitle("Absolute difference between false positives and false negatives at every threshold")
 
 balanced_thresh <- 0.01*min_index
 balanced_thresh
@@ -443,11 +442,17 @@ balanced_thresh
 ##We found the most balanced threshold to be 0.38. 
 
 ```{r}
-preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
 probs_rf <-1/(1+ exp(-preds_rf))
 
 y_hat <- factor(probs_rf > balanced_thresh, labels = c('Don','Hill'))
-y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
+y <- factor(pc_train_rf$winner, labels = c('Don','Hill'))
+
+#training misclassification
+training_rf_balanced_errors <- table(class = y, pred = y_hat)
+training_misclass_rf_balanced = 1-sum(diag(rf_balanced_errors))/nrow(pc_test)
+training_rf_balanced_errors
+training_misclass_rf_balanced
 
 #compute adjusted test misclassification errors
 rf_balanced_errors <- table(class = y, pred = y_hat)
@@ -455,7 +460,10 @@ misclass_rf_balanced = 1-sum(diag(rf_balanced_errors))/nrow(pc_test)
 rf_balanced_errors
 misclass_rf_balanced
 ```
+## Has the lowest ME yet of 6.2%
 
+
+## compare this with the threshold minimizing total missclassification
 ```{r}
 #calculate minimum training misclassification error across all thresholds
 preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
@@ -477,11 +485,14 @@ preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
 probs_rf <-1/(1+ exp(-preds_rf))
 rf_min_errors <- table( class = factor(pc_test_rf$winner, labels = c('Don', 'Hill')), 
                                 pred = factor(probs_rf>min_thresh, labels = c('Don','Hill')))
-rf_min_errors
-
 rf_min_misclass <- 1 - sum(diag(rf_min_errors))/nrow(pc_train)
+
+rf_min_errors
 rf_min_misclass
 ```
+## Has a lower, but comparable ME of 5.99%
+
+
 ## Linear Discriminant Analysis (LDA):
 ```{r}
 # fit lda model
@@ -585,7 +596,7 @@ misclass_qda_adj = 1-sum(diag(errors_qda_adj))/nrow(pc_train)
 misclass_qda_adj
 ```
 
-# Misclassification Rates Table
+# Basic Misclassification Rates Table
 ```{r}
 misclass.rates <- data.frame("Regression Model" = c("K Nearest Neighbors", "Random Forest", "Logistic Regression", "Random Tree", "Quadratic Discriminant Analysis", "Linear Discriminant Analysis"), "Misclassification Rate" = c(tot_misclass_knn, misclass_rf, tot_misclass_glm, misclass_tree, misclass_qda_adj, misclass_lda_adj))
 
@@ -593,3 +604,4 @@ misclass.rates <- data.frame("Regression Model" = c("K Nearest Neighbors", "Rand
 
 misclass.rates %>% pander()
 ```
+
