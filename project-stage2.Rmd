@@ -18,72 +18,27 @@ library(pander)
 library(tidyverse)
 ```
 
-### General report guidelines
-
-This outline provides a generic set of sections that you can use as either a starting point or a template to prepare your project report. You are not required to use these exact sections if another structure would be more natural for your specific project. 
-
-Below each section header in the outline are some comments about what kind of material that section should contain to help you get started. **If you use this document as a template, please remove all guidance and instructions, including this text, and replace the document title and author with an appropriate title for your project and your group members' names.**
-
-If you choose to use a different set of section headers, your report should include the following elements.
-
-1. A brief introduction to the topic of analyzing/predicting elections and the specific tasks you took up for the project (2-5 paragraphs).
-2. A description of the census and election data (raw records) and how it was preprocessed for your analysis (2-3 paragraphs + a few example rows).
-3. A brief description of the methods used in your analysis and what they are used to accomplish (2-3 paragraphs).
-4. A summary of your results (3-5 paragraphs + figures/tables).
-5. A brief discussion providing commentary on your results (1-2 paragraphs).
-
-If desired, you can include a code appendix; however, this is not required. The main body of the report does not need to be long. Aim for 4-8 pages with figures and tables.
-
-#### Formatting and appearance
-
-Formatting guidelines are simple:
-
-* R codes should not be included in the body of the report;
-* all R output should be formatted nicely (usually `pander()` works with summaries, tables, etc.);
-* all figures should be appropriately sized and labeled;
-* tables and figures should include a brief caption;
-* the body of the report should not exceed 10 pages;
-* no instructions or guidance provided with this template should appear in your report.
-
-#### Evaluation criteria
-
-We'll evaluate your report according to the following criteria:
-
-* (formatting, 5pt) formatting guidelines are followed;
-* (apparent accuracy, 5pt) results appear plausible;
-* (correctness, 10pt) results are properly interpreted, data and methods are correctly described;
-* (clarity, 10pt) overall writing and organization is clear and easy to follow.
-
-Please notice that there is no credit tied to how 'successful' the analysis was, or the degree to which the project produced novel insights into the 2016 election. If your work doesn't pan out as you'd hoped -- for example, if predictions are poor, or you don't find any significant patterns of the type you'd searched for -- you can still receive a perfect score if you follow the guidelines, avoid errors in computation, and describe your results 
-accurately and clearly.
-
----
-
-might delete?
-'''The results of US general election 2012 was predicted with considerable high accuracy, especially by Nate Silver's approach. The success of the polling and analysis methods can be attibuted primarily to the fact that the voters who were sampled for survery were honest with their opinion and that whatever change occurred over time was tractable with high accuracy. As we have seen that the voting preferences may change with a change in employment or a shift in federal 
-income tax schemes or an impactful campaign ad. Other sources of variation are sampling error and "house effect". The former implies overrepresentation of 
-voters of one candidate in the sample, and the corrections to such errors by pollsters may be biased due to "house effect". Both these error can be estimated 
-to great degree and adjusted for but the accuracy of polling survey remains the most important and sensitive part of this process.
-
-However, for the General election of 2016, polls and forecasts were generally wrong about the election due to systematic polling challenges. Clinton's 
-projected voteshare was overestimated in most cases, particularly within swing states. Experts have speculated that Trump supporters were reluctant to 
-participate and/or answer honestly to polling questions. This is probably due to the controversies surrounding Donald Trump. On the other hand Hillary was 
-a seasoned politician with well defined agendas and ideas for presidency. 
-
-To analyze the outcome of the election results further, our goal was to predict the winning candidate in each county for the US general election 2016 using 
-some specific statistical models using demographic-socio-economic variables as predictors. We also wanted to perform a comparative study of the competing 
-models. The models we used for our analysis are described below. '''
-
-
 # Introduction
+The results of US general election 2012 was predicted with considerable high accuracy, especially by Nate Silver's approach. The success of the polling and analysis methods can be attibuted primarily to the fact that the voters who were sampled for survery were honest with their opinion and that whatever change occurred over time was tractable with high accuracy. As we have seen that the voting preferences may change with a change in employment or a shift in federal
+income tax schemes or an impactful campaign ad. Other sources of variation are sampling error and "house effect". The former implies overrepresentation of voters of one candidate in the sample, and the corrections to such errors by pollsters may be biased due to "house effect". Both these error can be estimated to great degree and adjusted for but the accuracy of polling survey remains the most important and sensitive part of this process.
 
-In this paper, we analyzed results of the 2016 federal election at the county level. Our goal was to construct a model that accurately predicts which candidate will receive the most votes in a particular county. A variety of models were trained and tested before arriving at our final selection. The methods that were compared include Logistic Regression, K-Nearest Neighbors, Classification Trees, Random Forest, LDA, and QDA. Principal Component Analysis was implemented to produce a set of principal components that were used as covariates for the models. We trained the models, and the principal components, on a 70% training partition of the data. Models were compared based on their misclassification of the test data. Ultimately, we chose the Random Forest method. We then conducted further analysis to optimize its decision threshold to meet certain criteria, allowing us to arrive at a final model. 
+However, for the General election of 2016, polls and forecasts were generally wrong about the election due to systematic polling challenges. Clinton's projected voteshare was overestimated in most cases, particularly within swing states. Experts have speculated that Trump supporters were reluctant to participate and/or answer honestly to polling questions. This is probably due to the controversies surrounding Donald Trump. On the other hand Hillary was a seasoned politician with well defined agendas and ideas for presidency. 
+
+In this project, we strove to analyze the results of the 2016 federal election at the county level. Our goal was to construct a model that accurately predicts which candidate will receive the most votes in a particular county. A variety of models were trained and tested before arriving at our final selection. The methods that were compared include Logistic Regression, K-Nearest Neighbors, Classification Trees, Random Forest, LDA, and QDA. Principal Component Analysis was implemented to produce a set of principal components that were used as covariates for the models. We trained the models, and the principal components, on a 70% training partition of the data. Models were compared based on their misclassification of the test data. Ultimately, we chose the Random Forest method. We then conducted further analysis to optimize its decision threshold to meet certain criteria, allowing us to arrive at a final model. 
 
 
-[Do you guys think this is enough]
+# Materials
 
+There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution, demographic information. This data consisted of racial, employment, income, transportation, and location variables.  We aggregated the raw census data to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county. Table 1 shows a few rows and columns of the dataset.
 
-# Materials and methods
+> **Table 1**: Example rows and columns of the dataset.
+
+```{r echo = F}
+load('~/Documents/Spring2021/PSTAT131/final-project/merged_data2.RData')
+head(merged_data2[0:7]) %>% pander()
+```
+
+# Initial Methodization
 
 Some initial analysis showed that every county in US were won either by Donald Trump or Hillary Clinton. Since we perform our analysis retrospectively with the final winner of the election known, we construct the response as a binary variable with two outcomes 'Don' and 'Hill' respectively meaning that Donald Trump or Hillary Clinton won that particular county.
 
@@ -119,36 +74,9 @@ $\alpha^*(M)= \underset{\alpha \in (0,1)}{\operatorname{argmin}}\,TME^M(\alpha)$
 
 Hence $\alpha^*(M)$ is chosen for model M and We choose the model with lowest $TME^M(\alpha^*(M))$. 
 
-## Datasets
 
-There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution, demographic information. This data consisted of racial, employment, income, transportation, and location variables.  We aggregated the raw census data to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county. Table 1 shows a few rows and columns of the dataset.
+# Methods & Results
 
-> **Table 1**: Example rows and columns of the dataset.
-
-```{r echo = F}
-load('~/Documents/Spring2021/PSTAT131/final-project/merged_data2.RData')
-head(merged_data2[0:7]) %>% pander()
-```
-
-[Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.]
-
-
-
-## Brief Overview of Methods
-
-
-
-## Methods and Results
-
-Describe the methods you use and how you use them. Think of this as providing a road map to your analysis -- a reader should be able to retrace your steps and carry out your analysis by studying this section. A helpful organizational principle may be to tackle this by task -- describe how you approached each task in turn. 
-
-While it's not necessary to explain each method from first principles, some exposition of the method should be included. This can be quite simple, as in the example below.
-
-> To predict the winning candidate in each county and identify demographic variables that were predictive of the election outcome, logistic regression was used to model the probabilities that either major candidate won a county. Specifically, model inputs were an indicator for whether Trump won (response) and the census information for the corresponding county (covariates):
-
-> Parameters were estimated by maximum likelihood on 80% of the data and predictive accuracy was assessed on the remaining 20%.
-
----
 
 ## Data Preparation 
 
@@ -171,22 +99,9 @@ A classification tree was trained, at first, by overfitting a very large tree to
 ## Random Forest
 A random forest -- which is an ensemble decision-tree-based method -- was constructed according to the "Adaptive Boosting" scheme. We used 100 trees with 3 interaction terms and 5-fold cross validation. This method produced the best candidates for our final model. The Youden-optimized threshold was tested, as well as two more thresholds that minimized total misclassification and balanced false positives with false negatives to arrive at our preferred model. 
 
-# Results
+## Linear Discriminant Analysis
 
-This section should present and describe your results as succinctly as possible. Usually, this is done by showing and explaining figures and tables; I'd strongly recommend deciding first what figures and tables you wish to show, and then writing the section around those. You don't need to show *everything* you did (though that temptation is certainly strong at times), but just the key pieces needed to communicate the outcome. A helpful organizational principle would be to structure this section into two subsections, one for each task.
-
----
-
-The main metric we used to compare our models was the total misclassification rate. Table 2 shows the total misclassification rate for each model.
-
-> **Table 2**: Total misclassification rate for each model we fit.
-
-```{r echo = F}
-missclass <- read.csv('missclass_rates.csv')
-missclass %>% pander()
-```
-
-
+## Quadratic Discriminant Analysis
 
 # Strongest candidate: Random Forest
 
@@ -234,6 +149,21 @@ class  Don Hill
   
 The predictions slightly over-represent Donald trump, with a mistake ratio of 40:18, but the total misclassification rate of 5.99% is the absolute lowest of any model we found. Therefore, we have included it as one of our choices for the best model. 
 
+
+# Results
+
+This section should present and describe your results as succinctly as possible. Usually, this is done by showing and explaining figures and tables; I'd strongly recommend deciding first what figures and tables you wish to show, and then writing the section around those. You don't need to show *everything* you did (though that temptation is certainly strong at times), but just the key pieces needed to communicate the outcome. A helpful organizational principle would be to structure this section into two subsections, one for each task.
+
+---
+
+The main metric we used to compare our models was the total misclassification rate. Table 2 shows the total misclassification rate for each model.
+
+> **Table 2**: Total misclassification rate for each model we fit.
+
+```{r echo = F}
+missclass <- read.csv('missclass_rates.csv')
+missclass %>% pander()
+```
 
 
 # Discussion
