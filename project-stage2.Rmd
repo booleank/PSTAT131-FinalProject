@@ -59,9 +59,8 @@ accurately and clearly.
 
 ---
 
-# Introduction
-
-The results of US general election 2012 was predicted with considerable high accuracy, especially by Nate Silver's approach. The success of the polling and analysis methods can be attibuted primarily to the fact that the voters who were sampled for survery were honest with their opinion and that whatever change occurred over time was tractable with high accuracy. As we have seen that the voting preferences may change with a change in employment or a shift in federal 
+might delete?
+'''The results of US general election 2012 was predicted with considerable high accuracy, especially by Nate Silver's approach. The success of the polling and analysis methods can be attibuted primarily to the fact that the voters who were sampled for survery were honest with their opinion and that whatever change occurred over time was tractable with high accuracy. As we have seen that the voting preferences may change with a change in employment or a shift in federal 
 income tax schemes or an impactful campaign ad. Other sources of variation are sampling error and "house effect". The former implies overrepresentation of 
 voters of one candidate in the sample, and the corrections to such errors by pollsters may be biased due to "house effect". Both these error can be estimated 
 to great degree and adjusted for but the accuracy of polling survey remains the most important and sensitive part of this process.
@@ -73,7 +72,16 @@ a seasoned politician with well defined agendas and ideas for presidency.
 
 To analyze the outcome of the election results further, our goal was to predict the winning candidate in each county for the US general election 2016 using 
 some specific statistical models using demographic-socio-economic variables as predictors. We also wanted to perform a comparative study of the competing 
-models. The models we used for our analysis are described below. 
+models. The models we used for our analysis are described below. '''
+
+
+# Introduction
+
+In this paper, we analyzed results of the 2016 federal election at the county level. Our goal was to construct a model that accurately predicts which candidate will receive the most votes in a particular county. A variety of models were trained and tested before arriving at our final selection. The methods that were compared include Logistic Regression, K-Nearest Neighbors, Classification Trees, Random Forest, LDA, and QDA. Principal Component Analysis was implemented to produce a set of principal components that were used as covariates for the models. We trained the models, and the principal components, on a 70% training partition of the data. Models were compared based on their misclassification of the test data. Ultimately, we chose the Random Forest method. We then conducted further analysis to optimize its decision threshold to meet certain criteria, allowing us to arrive at a final model. 
+
+
+[Do you guys think this is enough]
+
 
 # Materials and methods
 
@@ -86,7 +94,7 @@ $$y_i=\left\{\begin{array}{lll}
 \text{'Hill'} & , & \text { Hillary Clinton won in i-th county}
 \end{array}\right.$$
 
-This particular construction of our response variable was done to facilitate the use of claffification models under 
+This particular construction of our response variable was done to facilitate the use of classification models under 
 Supervised learning methods we discussed in our PSTAT 131 course. These models are:
 
 1) Logistic Regression
@@ -127,7 +135,6 @@ head(merged_data2[0:7]) %>% pander()
 
 
 ## Brief Overview of Methods
-
 
 
 
@@ -178,6 +185,55 @@ The main metric we used to compare our models was the total misclassification ra
 missclass <- read.csv('missclass_rates.csv')
 missclass %>% pander()
 ```
+
+
+
+# Strongest candidate: Random Forest
+
+The Random Forest model appears to be the strongest candidate because it has the lowest total misclassification rate of any model at the 50% threshold (7.02%) as well as the Youden-optimized threshold (7.39%). Examining these thresholds more closely, we can see that there is room for improvement. Looking at the misclassifiation table for the 50% threshold: 
+
+thresh: 0.5
+      pred
+class  Don Hill
+  Don  766   11
+  Hill  57   86
+  
+  
+The total misclassifications are low, but 57 out of the 68  false predictions predict in favor of Donald Trump. This bias can be an effective way of minimizing total misclassification error, but it also ensures that our model will under-represent the counties won by Hillary Clinton. The Youden threshold, which maximizes the difference between True Positive Rate an False Positive Rate, might help to balance this out. Looking at the misclassification table for the Youden threshold of 26%:  
+
+thresh:0.26
+     pred
+class  Don Hill
+  Don  695   82
+  Hill  19  124
+  
+The same problem exists with this set of predictions, but this time in favor of Hillary Clinton. We found that all of our models had this problem. The 50% threshold tended to over-predict Donald Trump victories, so we tried using Youden's threshold to shift our predictions in the direction of Clinton, but this resulted in over-prediction of Clinton victories (and with higher total misclassification error). Our revised target is for our prediction errors to be split evenly between both candidates while maintaining low total misclassifications. With this target in mind, we looked for a new optimal threshold. 
+
+```{r}
+knitr::include_graphics('AbsoluteValue.png')
+```
+
+For each threshold in the range (0,1), we calculated the resultant absolute difference between false 'Clinton' predictions and false 'Trump' predictions. The threshold of 38% was found to yield the smallest difference. It also yielded a very low total misclassification rate of the training data (6.2%) Applying this threshold to random forest predictions of the test data yielded these misclassifications:
+
+thresh: 0.38
+      pred
+class  Don Hill
+  Don  753   24
+  Hill  33  110
+  
+These are great results for multiple reasons. The total misclassification error is 6.2% (same as the training data), which is the lowest of any model tested. Additionally, the false 'Clinton' predictions and false 'Trump' predictions are much more balanced, with a ratio of 24:33. Thus, the sums of the predictions are more accurate than any other model. The projected 134 Hillary counties and 786 Trump counties are quite close to the actual totals of the test data which are 143 and 777. This model meets our optimal criteria: yield a low total misclassification rate, and have misclassifications that are split evenly between the candidates. Therefore, it is one of our choices for the final model.
+
+
+To be thorough in our analysis, we also calculated the model that truly minimizes total misclassification error. We calculated the total training misclassifiactions at each threshold between 0 and 1, and found that the optimal threshold is 46%. The misclassifiation table of the test data looks like this:
+
+thresh: 0.46
+      pred
+class  Don Hill
+  Don  759   18
+  Hill  40  103
+  
+The predictions slightly over-represent Donald trump, with a mistake ratio of 40:18, but the total misclassification rate of 5.99% is the absolute lowest of any model we found. Therefore, we have included it as one of our choices for the best model. 
+
 
 
 # Discussion
