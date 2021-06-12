@@ -48,7 +48,7 @@ Supervised learning methods we discussed in our PSTAT 131 course. These models a
 5) Regression Tree
 6) Random Forest
 
-In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i='Don'),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. If the predicted probability from model M, $\hat{p}_i^M > \alpha$, then we predict that that Trump won, i.e. $\hat{y}_i^M='Don'$, otherwise $\hat{y}_i^M='Hill'$. Here $\hat{y}_i^M$ is the predicted response for $i^{th}$ county from the model M above.
+In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i=1),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. If the predicted $p_i > \alpha$, then we predict that that Trump won, i.e. $\hat{y_i}='Don'$, otherwise $\hat{y_i}='Hill'$. Here $\hat{y}_i^M$ is the predicted response for $i^{th}$ county from the model M above.
 
 Then we compute the misclassification for $i^{th}$ county: 
 $$z_i^M=\left\{\begin{array}{lll}
@@ -58,7 +58,7 @@ $$z_i^M=\left\{\begin{array}{lll}
 
 Hence $z_i^M(\alpha)=1$ means a misclassification for the $i^{th}$ county and model M. Then compute $TME^M(\alpha)=\frac{1}{n} \sum_i^n z_i^M(\alpha)$, the total misclassification error for each model and choose the model which gives the minimum of $TME^M(\alpha)$. Here the parameter $\alpha=0.5$ is chosen for our analysis.
 
-However which model turned out the winner optimize for $\alpha$ over a grid of $(0,1)$.
+ However which model turned out the winner optimize for $\alpha$ over a grid of $(0,1)$.
 
 ## Datasets
 
