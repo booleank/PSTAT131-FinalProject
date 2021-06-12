@@ -96,7 +96,7 @@ Supervised learning methods we discussed in our PSTAT 131 course. These models a
 5) Regression Tree
 6) Random Forest
 
-In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i=1),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. Let $\hat{p}_i^M$ be the predicted probability for win of Donald trump for $i^{th}$ county from model M. If $\hat{p}_i^M > \alpha$, then we predict that that Trump won, i.e. $\hat{y_i}^M=1$, otherwise $\hat{y_i}^M=0$. Here $\hat{y}_i^M$ is the predicted response for $i^{th}$ county from the model M above.
+In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i=1),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. If the predicted $p_i > \alpha$, then we predict that that Trump won, i.e. $\hat{y_i}=1$, otherwise $\hat{y_i}=0$. Here $\hat{y}_i^M$ is the predicted response for $i^{th}$ county from the model M above.
 
 Then we compute the misclassification for $i^{th}$ county: 
 $$z_i^M=\left\{\begin{array}{lll}
@@ -124,7 +124,14 @@ head(merged_data2[0:7]) %>% pander()
 
 [Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.]
 
-## Methods
+
+
+## Brief Overview of Methods
+
+
+
+
+## Methods and Results
 
 Describe the methods you use and how you use them. Think of this as providing a road map to your analysis -- a reader should be able to retrace your steps and carry out your analysis by studying this section. A helpful organizational principle may be to tackle this by task -- describe how you approached each task in turn. 
 
@@ -136,8 +143,10 @@ While it's not necessary to explain each method from first principles, some expo
 
 ---
 
-### The Principal Components
-We began by constructing Principal Component Analysis to use as inputs into our supervised methods in determined the winner of each county. This required scaling and centering of the merged data. We then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct amount of PC's to use in the supervised models we constructed a scree and cumulative variance plot. $$\text{cumulative variance explained}(q) = \frac{\sum_{j = 1}^q\lambda_j}{\sum_{j = 1}^p \lambda_j}$$  We found that the first 8 PC's captured 77.8% of the total variation which was sufficient cumulative variance explained threshold to implement onto our regression models.
+## Data Preparation 
+
+### Principle Component Analysis
+We began by conducting Principal Component Analysis on the training data. to use as inputs into our supervised methods in determined the winner of each county. This required scaling and centering of the merged data. We then computed loadings for the principal components and plotted them. This allowed us to visualize the variables that were the most influential in determining the value of the principal component. To figure out the correct number of PC's to use in the supervised models we constructed a scree and cumulative variance plot. $$\text{cumulative variance explained}(q) = \frac{\sum_{j = 1}^q\lambda_j}{\sum_{j = 1}^p \lambda_j}$$  We found that the first 8 PC's captured 77.8% of the total variation which was sufficient cumulative variance explained threshold to implement onto our regression models.
 
 ```{r echo = F, out.width = '90%'}
 knitr::include_graphics('screevar.png')
@@ -149,7 +158,11 @@ The first model we fit was a logistic regression model to predict the the winnin
 ### $k$-Nearest Neighbors
 The next model we wanted to compare was a $k$-nearest neighbors model. The class labels we used were the winning candidates (either Donald Trump or Hillary Clinton) and leave one out cross validation was performed in order to select the best $k$ that would minimize the error for our model. Like with the logistic regression model, we trained the $k$-nearest neighbors model on a 70% partition of the first 8 principal components data and measured the predictive accuracy based on the remaining 30% by computing the total misclassification error rate.
 
+## Classification Tree
+A classification tree was trained, at first, by overfitting a very large tree to the training PC data, then pruning it according to an optimal tuning parameter (k = 21.9) calculated via 25-fold cross validation. We ran the training and test sets through this tree to generate predictions and compute misclassifications. Youden-optimized threshold was also tested on the model. 
 
+## Random Forest
+A random forest -- which is an ensemble decision-tree-based method -- was constructed according to the "Adaptive Boosting" scheme. We used 100 trees with 3 interaction terms and 5-fold cross validation. This method produced the best candidates for our final model. The Youden-optimized threshold was tested, as well as two more thresholds that minimized total misclassification and balanced false positives with false negatives to arrive at our preferred model. 
 
 # Results
 
