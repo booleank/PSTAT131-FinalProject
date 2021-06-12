@@ -48,7 +48,7 @@ Supervised learning methods we discussed in our PSTAT 131 course. These models a
 5) Regression Tree
 6) Random Forest
 
-In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i='Don'),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. If the predicted probability from model M, $\hat{p}_i^M > \alpha$, then we predict that that Trump won, i.e. $\hat{y}_i^M='Don'$, otherwise $\hat{y}_i^M='Hill'$. Here $\hat{y}_i^M$ is the predicted response for $i^{th}$ county from the model M above for a given $\alpha$.
+In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i=1),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. If the predicted $p_i > \alpha$, then we predict that that Trump won, i.e. $\hat{y_i}='Don'$, otherwise $\hat{y_i}='Hill'$. Here $\hat{y}_i^M$ is the predicted response for $i^{th}$ county from the model M above.
 
 Then we compute the misclassification for $i^{th}$ county: 
 $$z_i^M=\left\{\begin{array}{lll}
@@ -56,9 +56,9 @@ $$z_i^M=\left\{\begin{array}{lll}
 1 & , &  y_i \ne \hat{y}_i^M \\
 \end{array}\right.$$
 
-Hence $z_i^M=1$ means a misclassification for the $i^{th}$ county and model M. Then compute $TME^M(\alpha)=\frac{1}{n} \sum_i^n z_i^M$, the total misclassification error for each model and choose the model which gives the minimum of $TME^M(\alpha)$. Here the parameter $\alpha=0.5$ is chosen for our analysis.
+Hence $z_i^M(\alpha)=1$ means a misclassification for the $i^{th}$ county and model M. Then compute $TME^M(\alpha)=\frac{1}{n} \sum_i^n z_i^M(\alpha)$, the total misclassification error for each model and choose the model which gives the minimum of $TME^M(\alpha)$. Here the parameter $\alpha=0.5$ is chosen for our analysis.
 
-However which model turned out the winner optimize for $\alpha$ over a grid of $(0,1)$.
+ However which model turned out the winner optimize for $\alpha$ over a grid of $(0,1)$.
 
 ## Datasets
 
@@ -177,3 +177,534 @@ The variables with the largest magnitudes suggest that they are most influential
 # Discussion
 
 By using principal component analysis in our regression models, we were able to build more predictive models. However, this reduced the interpretability of our results. Subsequently, we were unable to identify the demographic variables that were predictive of the election outcome through our models. However, we investigated the loadings for each variable for each principal component to identify important covariates. In our analysis, we fit several different models to the data and computed the total misclassification error rate in order to compare them all. Optimal probability thresholds were also computed using Youden's statistic in order to balance the trade-off between true positive rates and false positive rates. Additionally, we further focused on the random forest model which we ultimately chose to be a candidate model. This model had the lowest total misclassification rate and fit a reasonable criteria of balancing misclassifications between the two candidates.
+
+# Codes
+```{r eval = F, echo = T}
+# load data
+load('merged_data2.RData')
+
+county_win_data <- merged_data2 %>%
+  group_by(fips) %>%
+  slice_max(votes) %>%
+  ungroup()
+
+#center and scale
+x_mx <- county_win_data %>%
+  select(-c('county':'pct')) %>% 
+  scale(center = T, scale = T) #centers and scales data
+
+# set rng
+set.seed(20121)
+
+# partition data
+county_part <- resample_partition(as_tibble(x_mx), c(test = .3, train = .7))
+test <- county_part$test
+train <- county_part$train
+testdata <- as_tibble(x_mx) %>% slice(test$idx) #test dataframe
+traindata <- as_tibble(x_mx) %>% slice(train$idx) #training dataframe
+
+# compute loadings for PC1 and PC2
+x_svd <- svd(traindata)
+d_sq <- x_svd$d^2/(nrow(traindata) - 1)
+loadings <- x_svd$v
+
+# Loadings plot
+loadings[, 1:10] %>%
+  as.data.frame() %>%
+  rename(PC1 = V1, PC2 = V2, PC3 = V3, PC4 = V4, PC5 = V5, 
+         PC6 = V6, PC7 = V7, PC8 = V8, PC9 = V9, PC10 = V10) %>%
+  mutate(variable = colnames(traindata)) %>%
+  gather(key = 'PC', value = 'Loading', 1:10) %>%
+  arrange(variable) %>%
+  ggplot(aes(x = Loading, y = variable)) +
+  geom_point(aes(color = PC), size = 0.5) +
+  facet_wrap(~ PC) +
+  theme_bw(base_size = 12) +
+  geom_vline(xintercept = 0, color = 'blue') +
+  geom_path(aes(group = PC, color = PC)) +
+  labs(y = '')
+
+## scree and cumulative variance plots
+tibble(PC = 1:min(dim(traindata)),
+       Proportion = d_sq/sum(d_sq),
+       Cumulative = cumsum(Proportion)) %>%
+  gather(key = 'measure', value = 'Variance Explained', 2:3) %>%
+  ggplot(aes(x = PC, y = `Variance Explained`)) +
+  geom_point(size = 0.75) +
+  geom_path() +
+  facet_wrap(~ measure) +
+  theme_bw(base_size = 6) +
+  scale_x_continuous(breaks = 1:31, labels = as.character(1:31)) +
+  geom_hline(yintercept = 0.778,
+             color = 'red',
+             linetype = 2)
+sum(d_sq[1:8])/sum(d_sq)
+
+# get training PC data for first 8 PCs
+v_q <- loadings[, 1:8] 
+Z_train <- as.matrix(traindata) %*% v_q #training PC's
+Z_test <- as.matrix(testdata) %*% v_q #test PC's, *calculated on training loadings*
+
+#construct testing and training dataframes
+colnames(v_q) <- colnames(Z_train) <- colnames(Z_test) <- paste('PC', 1:8, sep = '')
+pc_train <- tibble(winner = factor(county_win_data$candidate[train$idx])) %>%
+  bind_cols(as_data_frame(Z_train)) 
+pc_train$winner <- fct_collapse(pc_train$winner,
+                               Don = 'Donald Trump',
+                               Hill = 'Hillary Clinton')
+
+pc_test <- tibble(winner = factor(county_win_data$candidate[test$idx])) %>%
+  bind_cols(as_data_frame(Z_test)) 
+pc_test$winner <- fct_collapse(pc_test$winner,
+                               Don = 'Donald Trump',
+                               Hill = 'Hillary Clinton')
+
+# Logistic regression model on training data using first 8 PCs
+glm_model <- glm(winner ~ ., family = 'binomial', data = pc_train)
+
+# compute estimated probabilities
+p_hat_glm <- predict(glm_model, pc_test, type = 'response')
+
+# bayes classifier
+y_hat_glm <- factor(p_hat_glm > 0.5, labels = c('Don', 'Hill'))
+
+# errors
+error_glm <- table(y = pc_test$winner, y_hat_glm)
+error_glm
+
+# total misclassification rate
+tot_misclass_glm <- 1 - sum(diag(error_glm))/nrow(pc_test)
+tot_misclass_glm
+
+# roc curve for glm
+prediction_glm <- prediction(predictions = p_hat_glm, labels = pc_test$winner)
+
+# compute error rates as a function of probability threshhold
+perf_glm <- performance(prediction.obj = prediction_glm, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_glm <- tibble(fpr = slot(perf_glm, 'x.values'),
+                  tpr = slot(perf_glm, 'y.values'),
+                  thresh = slot(perf_glm, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'glm',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_glm %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_glm, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_glm, youden)
+
+# recalibrate qda with different probability threshold
+preds_glm_adj <- factor(p_hat_glm > optimal_thresh$thresh,
+                        labels = c(0, 1))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_glm_adj <- table(class = pc_test$winner, pred = preds_glm_adj)
+errors_glm_adj
+
+misclass_glm_adj = 1-sum(diag(errors_glm_adj))/nrow(pc_test)
+misclass_glm_adj
+
+y <- (pc_train %>% pull(winner))
+
+# leave one out cross validation
+cv_out <- tibble(k = seq_range(5:50, n = 20, pretty = T)) %>%
+  mutate(loocv_preds = map(k, ~ knn.cv(pc_train[-1], y, .x)),
+         class = map(k, ~ y)) %>%
+  mutate(misclass = map2(loocv_preds, class, 
+                         ~ as.numeric(.x) - as.numeric(.y))) %>%
+  mutate(error = map(misclass, ~ mean(abs(.x))))
+
+# error rates for each k
+cv_errors <- cv_out %>% 
+  select(k, error) %>% 
+  unnest(everything()) 
+
+# plot errors against k
+cv_errors %>%
+  ggplot() +
+  geom_line(aes(x = k, y = error), color = 'cornflowerblue') +
+  theme_bw()
+
+# select k
+best_k <- cv_errors$k[which.min(cv_errors$error)]
+
+# re-train with best k
+pred_knn <- knn(train = pc_train[-1], test = pc_test[-1], cl = y, k = best_k)
+
+# misclassifications
+error_knn <- table(pc_test$winner, pred_knn)
+error_knn
+
+# total misclassification rate
+tot_misclass_knn <- 1 - sum(diag(error_knn))/nrow(pc_test)
+tot_misclass_knn
+
+set.seed(20121)
+
+#initial tree
+nmin <- 5
+tree_opts <- tree.control(nobs = nrow(pc_train), 
+                          minsize = nmin, 
+                          mindev = 0)
+t_0 <- tree(winner ~ ., data = pc_train,
+                control = tree_opts, split = 'deviance') 
+
+nfolds <- 25
+cv_out <- cv.tree(t_0, K = nfolds)
+cv_df <- tibble(alpha = cv_out$k,
+                impurity = cv_out$dev,
+                size = cv_out$size)
+best_alpha <- slice_min(cv_df, impurity) %>%
+  slice_min(size)
+best_alpha
+# prune initial tree
+t_opt <- prune.tree(t_0, k = best_alpha$alpha)
+
+# plot
+draw.tree(t_opt, cex = 0.8, size = 2, digits = 1)
+
+# class probabilities on training partition
+probs_tree <- predict(t_opt, pc_train)
+
+# predicted training results
+preds_tree <- factor(probs_tree[, 2] > 0.5, labels = c('Don', 'Hill'))
+
+# training misclassification error rates
+training_error_tree <- table(class = pc_train$winner, pred = preds_tree)
+training_misclass_tree = 1-sum(diag(training_error_tree))/nrow(pc_train)
+
+# roc curve for classification tree
+prediction_tree <- prediction(predictions = probs_tree[,2], labels = pc_train$winner)
+
+# compute error rates as a function of probability threshhold
+perf_tree <- performance(prediction.obj = prediction_tree, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_tree <- tibble(fpr = slot(perf_tree, 'x.values'),
+                  tpr = slot(perf_tree, 'y.values'),
+                  thresh = slot(perf_tree, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'lda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_tree %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_tree, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_tree, youden)
+
+# recalibrate qda with different probability threshold
+preds_tree_adj <- factor(probs_tree[,2] > optimal_thresh$thresh,
+                        labels = c('Don', 'Hill'))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+training_error_tree_adj <- table(class = pc_train$winner, pred = preds_tree_adj)
+training_misclass_tree_adj = 1-sum(diag(training_error_tree_adj))/nrow(pc_train)
+
+# class probabilities on test partition
+probs_tree <- predict(t_opt, pc_test)
+
+# predict test results
+preds_tree <- factor(probs_tree[,2] >0.5, 
+                     label = c('Don', 'Hill'))
+
+# compute misclassifications
+error_tree <- table(class = pc_test$winner, pred = preds_tree)
+misclass_tree = 1-sum(diag(error_tree))/nrow(pc_test)
+
+#predict test results with youden threshold
+preds_tree <- factor(probs_tree[,2] > optimal_thresh$thresh, label = c("Don", "Hill"))
+
+#compute adjusted misclassifications
+error_tree_adj <-table(class = pc_test$winner, pred = preds_tree)
+misclass_tree_adj = 1-sum(diag(error_tree_adj))/nrow(pc_test)
+
+error_tree
+misclass_tree
+
+error_tree_adj
+misclass_tree_adj
+
+pc_train_rf <- pc_train %>%
+  mutate(winner = ifelse(winner == "Hill",1,0))
+pc_test_rf <- pc_test %>%
+      mutate(winner = ifelse(winner == "Hill",1,0))
+
+fit_gbm <- gbm(winner ~ ., data = pc_train_rf, distribution ='adaboost', interaction.depth =3, n.trees =100, cv.folds = 5)
+
+# select boosting iterations
+best_m <- gbm.perf(fit_gbm, method ='cv')
+
+# compute predictions on training set
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+y_hat <- factor(probs_rf >0.5, labels = c('Don','Hill'))
+y <- factor(pc_train_rf$winner, labels = c('Don','Hill'))
+
+# compute training misclassification errors
+rf_errors <- table(class = y, pred = y_hat)
+training_misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_train)
+training_misclass_rf
+
+# roc curve for random forest
+prediction_rf <- prediction(predictions = probs_rf, labels = pc_train_rf$winner)
+
+# compute error rates as a function of probability threshhold
+perf_rf <- performance(prediction.obj = prediction_rf, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_rf <- tibble(fpr = slot(perf_rf, 'x.values'),
+                  tpr = slot(perf_rf, 'y.values'),
+                  thresh = slot(perf_rf, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'lda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_rf %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_rf, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_rf, youden)
+
+# recalibrate qda with different probability threshold
+preds_rf_adj <- factor(probs_rf > optimal_thresh$thresh,
+                        labels = c(0, 1))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_rf_adj <- table(class = pc_train_rf$winner, pred = preds_rf_adj)
+
+training_misclass_rf_adj = 1-sum(diag(errors_rf_adj))/nrow(pc_train)
+training_misclass_rf_adj
+
+# compute test predictions
+preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+y_hat <- factor(probs_rf >0.5, labels = c('Don','Hill'))
+y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
+
+# compute test misclassification errors
+rf_errors <- table(class = y, pred = y_hat)
+
+misclass_rf = 1-sum(diag(rf_errors))/nrow(pc_test)
+
+# compute test predictions with optimal threshold
+preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+y_hat <- factor(probs_rf >optimal_thresh$thresh, labels = c('Don','Hill'))
+y <- factor(pc_test_rf$winner, labels = c('Don','Hill'))
+
+#compute adjusted test misclassification errors
+rf_adj_errors <- table(class = y, pred = y_hat)
+misclass_rf_adj = 1-sum(diag(rf_errors))/nrow(pc_test)
+
+
+rf_errors
+misclass_rf
+
+rf_adj_errors
+misclass_rf_adj
+
+# filter out losing candidates by county => 1 row per county, 'candidate' is winner of the county
+county_win_data <- merged_data2 %>%
+  group_by(fips) %>%
+  slice_max(votes) %>%
+  ungroup()
+
+#center and scale
+x_mx <- scale(na.omit(county_win_data[,-c(1:7)]))
+#install.packages('hmeasure')
+library(hmeasure)
+#goal: fp = fn; fp-fn = 0
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+
+
+difs = vector('list', 100)
+for(i in seq_along(x)){
+  e = misclassCounts(probs_rf > i*0.01, pc_train_rf$winner)
+  dif <- abs(e$conf.matrix[1,2] - e$conf.matrix[2,1])
+  difs[[i]] <- dif
+}
+
+opt_search <- data.frame('thresh' = 0.01*1:100, 'difference'= unlist(difs))
+min_index = which.min(unlist(difs))
+min = min(unlist(difs))
+optimum <- data.frame(min_index, min)
+
+opt_search %>% 
+  ggplot(aes(x = thresh, y = difference)) + 
+  geom_path() +
+  theme_bw() +
+  geom_point(data = optimum, aes(x = 0.01*min_index, min),
+             shape = 16, size = 3, color = 'red') +
+  ggtitle("Absolute difference between false positives and false negatives at every threshold")
+
+balanced_thresh <- 0.01*min_index
+balanced_thresh
+
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+
+y_hat <- factor(probs_rf > balanced_thresh, labels = c('Don','Hill'))
+y <- factor(pc_train_rf$winner, labels = c('Don','Hill'))
+
+#training misclassification
+training_rf_balanced_errors <- table(class = y, pred = y_hat)
+training_misclass_rf_balanced = 1-sum(diag(rf_balanced_errors))/nrow(pc_test)
+training_rf_balanced_errors
+training_misclass_rf_balanced
+
+#compute adjusted test misclassification errors
+rf_balanced_errors <- table(class = y, pred = y_hat)
+misclass_rf_balanced = 1-sum(diag(rf_balanced_errors))/nrow(pc_test)
+rf_balanced_errors
+misclass_rf_balanced
+
+#calculate minimum training misclassification error across all thresholds
+preds_rf <- predict(fit_gbm, pc_train_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+ME = vector('list', 100)
+for(i in seq_along(x)){
+  me = misclassCounts(probs_rf > i * 0.01, pc_train_rf$winner)$metrics$ER #calculates total misclassification error
+  ME[[i]] = me
+}
+min_thresh = 0.01*which.min(unlist(ME)) # threshold corresponding to smallest error
+
+training_rf_min_errors <- table(class = factor(pc_train_rf$winner, labels = c('Don', 'Hill')), 
+                                pred = factor(probs_rf>min_thresh, labels = c('Don','Hill')))
+training_rf_min_misclass = 1 - sum(diag(training_rf_min_errors))/nrow(pc_train)
+
+
+#calculate test misclassifications based on training threshold for smallest error
+preds_rf <- predict(fit_gbm, pc_test_rf, n.trees = best_m)
+probs_rf <-1/(1+ exp(-preds_rf))
+rf_min_errors <- table( class = factor(pc_test_rf$winner, labels = c('Don', 'Hill')), 
+                                pred = factor(probs_rf>min_thresh, labels = c('Don','Hill')))
+rf_min_misclass <- 1 - sum(diag(rf_min_errors))/nrow(pc_train)
+
+rf_min_errors
+rf_min_misclass
+
+# fit lda model
+fit_lda <- MASS::lda(winner ~ ., method = 'mle', data = pc_train_rf)
+
+# compute estimated classes
+preds_lda <- predict(fit_lda, pc_train_rf)
+
+# cross-tabulate estimated and true classes
+errors_lda <- table(class = pc_train_rf$winner, pred = preds_lda$class)
+misclass_lda = 1-sum(diag(errors_lda))/nrow(pc_train)
+misclass_lda
+
+# roc curve for lda
+prediction_lda <- prediction(predictions = preds_lda$posterior[, 2], labels = pc_train_rf$winner)
+
+# compute error rates as a function of probability threshhold
+perf_lda <- performance(prediction.obj = prediction_lda, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_lda <- tibble(fpr = slot(perf_lda, 'x.values'),
+                  tpr = slot(perf_lda, 'y.values'),
+                  thresh = slot(perf_lda, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'lda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_lda %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_lda, youden),
+             shape = 16, color = 'red')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_lda, youden)
+
+# recalibrate qda with different probability threshold
+preds_lda_adj <- factor(preds_lda$posterior[, 2] > optimal_thresh$thresh,
+                        labels = c(0, 1))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_lda_adj <- table(class = pc_train_rf$winner, pred = preds_lda_adj)
+
+misclass_lda_adj = 1-sum(diag(errors_lda_adj))/nrow(pc_train)
+misclass_lda_adj
+
+# fit qda model
+fit_qda <- MASS::qda(winner ~ ., method = 'mle', data = pc_train_rf)
+
+# compute estimated classes
+preds_qda <- predict(fit_qda, pc_train_rf)
+
+# cross-tabulate estimated and true classes
+errors_qda <- table(class = pc_train_rf$winner, pred = preds_qda$class)
+misclass_qda = 1-sum(diag(errors_qda))/nrow(pc_train)
+misclass_qda
+
+# roc curve for qda
+prediction_qda <- prediction(predictions = preds_qda$posterior[, 2], labels = pc_train_rf$winner)
+
+# compute error rates as a function of probability threshhold
+perf_qda <- performance(prediction.obj = prediction_qda, 'tpr', 'fpr')
+
+# extract error rates as a tibble
+rates_qda <- tibble(fpr = slot(perf_qda, 'x.values'),
+                  tpr = slot(perf_qda, 'y.values'),
+                  thresh = slot(perf_qda, 'alpha.values')) %>%
+  unnest(everything()) %>%
+  mutate(method = 'qda',
+         youden = tpr - fpr)
+
+# plot roc curve and optimal threshold
+rates_qda %>%
+  ggplot(aes(x = fpr, y = tpr)) +
+  geom_path(aes(color = thresh), size = 1) +
+  scale_color_binned(type = 'viridis') +
+  guides(color = guide_bins()) +
+  theme_bw() +
+  geom_point(data = slice_max(rates_qda, youden),
+             shape = 16, color = 'red') +
+  xlab('FPR (False "Hillary" Rate)') +
+  ylab('TPR (True "Hillary" Rate)')
+
+# store optimal threshold
+optimal_thresh <- slice_max(rates_qda, youden)
+
+# recalibrate qda with different probability threshold
+preds_qda_adj <- factor(preds_qda$posterior[, 2] > optimal_thresh$thresh,
+                        labels = c(1, 0))
+
+# cross-tabulate estimated and true classes with adjusted threshold
+errors_qda_adj <- table(class = pc_train_rf$winner, pred = preds_qda_adj)
+misclass_qda_adj = 1-sum(diag(errors_qda_adj))/nrow(pc_train)
+misclass_qda_adj
+```
+
+
