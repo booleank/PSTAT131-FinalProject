@@ -405,6 +405,28 @@ misclass_rf_adj
 ```
 #Random forest shows lowest total misclass.
 
+## Linear and Quadratic Discriminant Analysis (LDA & QDA):
+```{r}
+# fit lda model
+fit_lda <- MASS::lda(winner ~ ., method = 'mle', data = pc_train)
+# compute estimated classes
+preds_lda <- predict(fit_lda, pc_test)
+# cross-tabulate estimated and true classes
+errors_lda <- table(class = pc_test$winner, pred = preds_lda$class)
+misclass_lda = 1-sum(diag(errors_lda))/nrow(pc_test)
+misclass_lda
+
+
+# fit qda model
+fit_qda <- MASS::qda(winner ~ ., method = 'mle', data = pc_train)
+# compute estimated classes
+preds_qda <- predict(fit_qda, pc_test)
+# cross-tabulate estimated and true classes
+errors_qda <- table(class = pc_test$winner, pred = preds_qda$class)
+misclass_qda = 1-sum(diag(errors_qda))/nrow(pc_test)
+misclass_qda
+```
+
 ### Rather than simply minimize total misclassification, we want our model to provide a balanced set of predictions. Our first set of candidate models have the tendency to over-predict Donald Trump victories. We tried using Youden's threshold to shift our predictions in the direction of Clinton, but this resulted in over-prediction of Clinton victories. Our revised target is to achieve approximately equal false negatives and false positives; We want our set of prediction errors to be split evenly between both candidates, while maintaining low total misclassifications. With this target in mind, we will attempt to optimize our Random Forest prediction threshold. We picked Random Forest because it has the lowest total misclassification error for both the regular and Youden-optimized thresholds. 
 
 ```{r, fig.height = 5, fig.width = 8}
