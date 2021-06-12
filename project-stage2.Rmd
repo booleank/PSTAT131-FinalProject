@@ -96,13 +96,17 @@ Supervised learning methods we discussed in our PSTAT 131 course. These models a
 5) Regression Tree
 6) Random Forest
 
-In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i=1),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. If the predicted $p_i > \alpha$, then we predict that that Trump won, i.e. $\hat{y_i}=1$, otherwise $\hat{y_i}=0$. Here $\hat{y}_i$ is the predicted response for $i^{th}$ county.
+In each model above we predict $p_i=P(y_i=1),\,\,\forall i$, the probability of win for Donald Trump in $i^{th}$ county. Then we consider a threshold $\alpha \in (0,1)$. If the predicted $p_i > \alpha$, then we predict that that Trump won, i.e. $\hat{y_i}=1$, otherwise $\hat{y_i}=0$. Here $\hat{y}_i$ is the predicted response for $i^{th}$ county from any particular model above. 
+
+Then we compute the misclassification for $i^{th}$ county: 
+$$z_i=\left\{\begin{array}{lll}
+1 & , & y_i=\hat{y}_i \\
+0 & , &  y_i \ne \hat{y}_i \\
+\end{array}\right.$$
+
+To optimize over the tuning parameter $\alpha$, we consider an equidistant grid over $(0,1)$, and 
 
 ## Datasets
-
-Describe the raw data sources -- census and election data. Then provide a description of the preprocessing that you did in stage 1; this does not need to cover every step, but again, should enable the reader to imagine the process. They should grasp that you took aggregated tract-level census data to the county level and merged this with election data. The aggregation is probably helpful to describe in a little detail, but the conversions of population structure variables to percentages are not necessary to mention.
-
----
 
 There were two raw data sources used in this project: election and census. These datasets required cleaning and processing which we executed in Stage 1 of this project. The raw election dataset stored federal, state, and county level vote tallies which were then divided into separate datasets. The raw census dataset consisted of higher resolution, demographic information. This data consisted of racial, employment, income, transportation, and location variables.  We aggregated the raw census data to the county level. This allowed us to merge the county level election data set with the aggregated census data. The result was a single dataset containing vote information for the winning candidate and runner-up in each county. Table 1 shows a few rows and columns of the dataset.
 
@@ -112,8 +116,6 @@ There were two raw data sources used in this project: election and census. These
 load('~/Documents/Spring2021/PSTAT131/final-project/merged_data2.RData')
 head(merged_data2[0:7]) %>% pander()
 ```
-
-
 
 [Please include a simple table showing some example rows and columns of the dataset as you've formatted it for analysis.]
 
