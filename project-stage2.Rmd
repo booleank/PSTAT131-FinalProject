@@ -77,7 +77,16 @@ models. The models we used for our analysis are described below.
 
 # Materials and methods
 
-Some initial analysis showed that every county in US were won either by Donald Trump or Hillary Clinton. Since we perform our analysis retrospectively with the final winner of the election known, we construct the response as a binary variable with two outcomes 'Don' and 'Hill' respectively meaning that Donald Trump or Hillary Clinton won that particular county. This particular construction of our response variable was done to facilitate the use of claffification models under 
+Some initial analysis showed that every county in US were won either by Donald Trump or Hillary Clinton. Since we perform our analysis retrospectively with the final winner of the election known, we construct the response as a binary variable with two outcomes 'Don' and 'Hill' respectively meaning that Donald Trump or Hillary Clinton won that particular county.
+
+Let $i=1,2,3,...,n$ be the indicator for counties, and n be total number of counties in US for our analysis. Define,
+
+$$y_i=\left\{\begin{array}{lll}
+\text{'Don'} & , & \text { Donald Trump won in i-th county } \\
+\text{'Hill'} & , & \text { Hillary Clinton won in i-th county}
+\end{array}\right.$$
+
+This particular construction of our response variable was done to facilitate the use of claffification models under 
 Supervised learning methods we discussed in our PSTAT 131 course. These models are:
 
 1) Logistic Regression
@@ -87,9 +96,7 @@ Supervised learning methods we discussed in our PSTAT 131 course. These models a
 5) Regression Tree
 6) Random Forest
 
-In each model above we predict the probability of win for Donald Trump. Then we consider a threshold in the range $(0,1)$. If the predicted probability >
-threshold, then we predict that that Trump w
-
+In each model above we predict the probability of win for Donald Trump, $p_i=P(y_i=1),\,\,\forall i$. Then we consider a threshold $\alpha \in (0,1)$. If the predicted $p_i > \alpha$, then we predict that that Trump won, i.e. $\hat{y_i}=1$, otherwise $\hat{y_i}=0$. Here $\hat{y}_i$ is the predicted response for $i^{th}$ county.
 
 ## Datasets
 
